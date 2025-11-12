@@ -1,2 +1,2 @@
-def hello_word(session, msg):
+def hello_world(session, msg):
     return msg
