@@ -1,0 +1,8 @@
+config/env_local.sh
+config/private/rsa_key_sf.pem
+config/private/
+test.py
+*.log
+__pycache__/
+.venv/
+*.pem
