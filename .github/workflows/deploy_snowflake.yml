@@ -1,1 +1,3 @@
-# TO DO: CI/CD pipeline to deploy SQL to SnowFlake from GitHub.
+# Snowflake -> GitHub sync workflow. 
+# Syncs object changes made in Snowflake into the Git repo. 
+# NOT a deployment process. 

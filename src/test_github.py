@@ -2,7 +2,7 @@ import os
 import requests
 
 def test_github_connection():
-    token = os.getenv("GITHUB_PAT")
+    token = os.getenv("GITHUB_TOKEN")
     user = os.getenv("GITHUB_ORG")
     repo = os.getenv("GITHUB_REPO")
 
