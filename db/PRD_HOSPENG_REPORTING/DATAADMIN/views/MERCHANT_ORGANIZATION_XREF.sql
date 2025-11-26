@@ -1,4 +1,4 @@
-create or replace view PRD_HOSPENG_REPORTING.DATAADMIN.MERCHANT_ORGANIZATION_XREF(
+create or replace view MERCHANT_ORGANIZATION_XREF(
 	MERCHANT_ORGANIZATION_XREF_PK,
 	MERCHANT_ORGANIZATION_XREF_NK,
 	MERCHANT_ORGANIZATION,
@@ -85,4 +85,5 @@ SELECT
 ----------------------------------------------------------------------------------------------
 FROM DATALANDING.POSAPI_PUBLIC_PAYMENT_METHOD     LGL
   WHERE TRY_PARSE_JSON(fields):merchantId IS NOT NULL
+;
 ;

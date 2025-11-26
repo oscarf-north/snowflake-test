@@ -1,4 +1,4 @@
-create or replace view PRD_HOSPENG_REPORTING.DATAADMIN.TAX_FACT(
+create or replace view TAX_FACT(
 	TAX_FACT_PK,
 	TAX_FACT_NK,
 	TAXRATENAME,

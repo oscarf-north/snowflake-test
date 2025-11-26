@@ -1,4 +1,4 @@
-create or replace TABLE PRD_HOSPENG_REPORTING.DATAWAREHOUSE.DRAWER_DIM (
+create or replace TABLE DRAWER_DIM (
 	DRAWER_DIM_PK NUMBER(38,0) autoincrement start 1 increment 1 noorder,
 	DRAWER_DIM_NK NUMBER(38,0),
 	DRAWER NUMBER(38,0),

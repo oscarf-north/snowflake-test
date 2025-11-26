@@ -1,4 +1,4 @@
-create or replace view PRD_HOSPENG_REPORTING.DATAADMIN.REFUNDS_FACT(
+create or replace view REFUNDS_FACT(
 	REFUNDS_FACT_PK,
 	REFUNDS_FACT_NK,
 	PAYMENTNUMBER,
@@ -149,3 +149,4 @@ FROM DATALANDING.POSAPI_PUBLIC_CHEQUE             CHK
                                                                         REF  
 WHERE REF.value IS NOT NULL and CHK.PAYMENTS <> '__value_not_modified__'                                                                       
                                                                         ;
+;

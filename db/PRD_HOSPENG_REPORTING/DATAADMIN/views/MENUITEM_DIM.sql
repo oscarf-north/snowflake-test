@@ -1,4 +1,4 @@
-create or replace view PRD_HOSPENG_REPORTING.DATAADMIN.MENUITEM_DIM(
+create or replace view MENUITEM_DIM(
 	MENUITEM_DIM_PK,
 	MENUITEM_DIM_NK,
 	SKU,

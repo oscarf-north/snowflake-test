@@ -1,4 +1,4 @@
-create or replace secure view PRD_HOSPENG_REPORTING.DATAADMIN.DATASHARE_SECURE_VIEW(
+create or replace secure view DATASHARE_SECURE_VIEW(
 	DATASHARETESTNAME,
 	OTHER_ID
 ) as

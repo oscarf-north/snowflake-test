@@ -1,4 +1,4 @@
-create or replace view PRD_HOSPENG_REPORTING.DATAADMIN.BATCH_DIM(
+create or replace view BATCH_DIM(
 	BATCH_DIM_PK,
 	BATCH_DIM_NK,
 	BATCH_NUMBER,

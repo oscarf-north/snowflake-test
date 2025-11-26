@@ -1,4 +1,4 @@
-create or replace TABLE PRD_HOSPENG_REPORTING.DATAWAREHOUSE.PAYINOUT_FACT (
+create or replace TABLE PAYINOUT_FACT (
 	PAYINOUT_FACT_PK NUMBER(38,0) autoincrement start 1 increment 1 noorder,
 	PAYINOUT_FACT_NK NUMBER(38,0),
 	PAYID NUMBER(38,0),

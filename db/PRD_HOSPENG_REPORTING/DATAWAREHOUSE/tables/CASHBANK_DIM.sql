@@ -1,4 +1,4 @@
-create or replace TABLE PRD_HOSPENG_REPORTING.DATAWAREHOUSE.CASHBANK_DIM (
+create or replace TABLE CASHBANK_DIM (
 	CASHBANK_DIM_PK NUMBER(38,0) autoincrement start 1 increment 1 noorder,
 	CASHBANK_DIM_NK NUMBER(38,0),
 	CASHBANK NUMBER(38,0),

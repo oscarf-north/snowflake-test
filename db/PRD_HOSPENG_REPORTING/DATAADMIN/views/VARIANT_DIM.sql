@@ -1,4 +1,4 @@
-create or replace view PRD_HOSPENG_REPORTING.DATAADMIN.VARIANT_DIM(
+create or replace view VARIANT_DIM(
 	VARIANT_DIM_PK,
 	VARIANT_DIM_NK,
 	VARIANT,

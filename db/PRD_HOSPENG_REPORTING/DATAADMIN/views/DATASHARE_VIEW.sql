@@ -1,4 +1,4 @@
-create or replace view PRD_HOSPENG_REPORTING.DATAADMIN.DATASHARE_VIEW(
+create or replace view DATASHARE_VIEW(
 	DATASHARETESTNAME,
 	OTHER_ID
 ) as

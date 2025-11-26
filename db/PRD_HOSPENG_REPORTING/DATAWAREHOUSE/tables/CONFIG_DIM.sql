@@ -1,4 +1,4 @@
-create or replace TABLE PRD_HOSPENG_REPORTING.DATAWAREHOUSE.CONFIG_DIM (
+create or replace TABLE CONFIG_DIM (
 	CONFIG_DIM_PK NUMBER(38,0) autoincrement start 1 increment 1 noorder,
 	CONFIG_DIM_NK NUMBER(38,0),
 	CONFIG_ID NUMBER(38,0),

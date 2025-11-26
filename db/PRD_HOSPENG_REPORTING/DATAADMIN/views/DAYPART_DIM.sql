@@ -1,4 +1,4 @@
-create or replace view PRD_HOSPENG_REPORTING.DATAADMIN.DAYPART_DIM(
+create or replace view DAYPART_DIM(
 	DAYPART_DIM_PK,
 	DAYPART_DIM_NK,
 	DAYPART,

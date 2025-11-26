@@ -1,4 +1,4 @@
-create or replace view PRD_HOSPENG_REPORTING.DATAADMIN.DRAWER_DIM(
+create or replace view DRAWER_DIM(
 	DRAWER_DIM_PK,
 	DRAWER_DIM_NK,
 	DRAWER,

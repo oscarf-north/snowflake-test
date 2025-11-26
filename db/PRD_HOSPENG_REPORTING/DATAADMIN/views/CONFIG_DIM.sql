@@ -1,4 +1,4 @@
-create or replace view PRD_HOSPENG_REPORTING.DATAADMIN.CONFIG_DIM(
+create or replace view CONFIG_DIM(
 	CONFIG_DIM_PK,
 	CONFIG_DIM_NK,
 	CONFIG_ID,

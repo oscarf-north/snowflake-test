@@ -1,4 +1,4 @@
-create or replace TABLE PRD_HOSPENG_REPORTING.DATAWAREHOUSE.SHIFT_DIM (
+create or replace TABLE SHIFT_DIM (
 	SHIFT_DIM_PK NUMBER(38,0) autoincrement start 1 increment 1 noorder,
 	SHIFT_DIM_NK NUMBER(38,0),
 	SHIFT NUMBER(38,0),

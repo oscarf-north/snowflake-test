@@ -1,4 +1,4 @@
-create or replace view PRD_HOSPENG_REPORTING.DATAWAREHOUSE.REPORT_REPORTUSE(
+create or replace view REPORT_REPORTUSE(
 	"Report Name",
 	"Start Date",
 	"Start Time",

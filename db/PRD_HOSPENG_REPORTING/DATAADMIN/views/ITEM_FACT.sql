@@ -1,4 +1,4 @@
-create or replace view PRD_HOSPENG_REPORTING.DATAADMIN.ITEM_FACT(
+create or replace view ITEM_FACT(
 	ITEM_FACT_PK,
 	ITEM_FACT_NK,
 	DW_STARTDATE,

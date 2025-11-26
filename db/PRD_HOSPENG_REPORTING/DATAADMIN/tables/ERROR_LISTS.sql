@@ -1,3 +1,3 @@
-create or replace TABLE PRD_HOSPENG_REPORTING.DATAADMIN.ERROR_LISTS (
+create or replace TABLE ERROR_LISTS (
 	"Error List" VARCHAR(16777216)
 );

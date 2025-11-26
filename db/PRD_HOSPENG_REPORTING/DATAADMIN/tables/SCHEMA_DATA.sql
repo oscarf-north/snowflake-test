@@ -1,4 +1,4 @@
-create or replace TABLE PRD_HOSPENG_REPORTING.DATAADMIN.SCHEMA_DATA (
+create or replace TABLE SCHEMA_DATA (
 	"Support ID" VARCHAR(16777216),
 	"Status" VARCHAR(16777216),
 	"Discount Level" VARCHAR(4),

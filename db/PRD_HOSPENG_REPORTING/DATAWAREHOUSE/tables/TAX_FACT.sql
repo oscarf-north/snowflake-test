@@ -1,4 +1,4 @@
-create or replace TABLE PRD_HOSPENG_REPORTING.DATAWAREHOUSE.TAX_FACT (
+create or replace TABLE TAX_FACT (
 	TAX_FACT_PK NUMBER(38,0) autoincrement start 1 increment 1 noorder,
 	TAX_FACT_NK VARCHAR(16777216),
 	TAXRATENAME VARCHAR(16777216),

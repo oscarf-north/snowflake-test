@@ -1,4 +1,4 @@
-create or replace TABLE PRD_HOSPENG_REPORTING.DATAWAREHOUSE.ORDER_SUMMARY (
+create or replace TABLE ORDER_SUMMARY (
 	ID NUMBER(38,0) autoincrement start 1 increment 1 order,
 	ITEMS_SOLD_COUNT NUMBER(38,0),
 	GUEST_COUNT NUMBER(38,0),

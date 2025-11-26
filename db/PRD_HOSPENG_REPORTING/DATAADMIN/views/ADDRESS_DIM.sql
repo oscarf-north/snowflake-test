@@ -1,4 +1,4 @@
-create or replace view PRD_HOSPENG_REPORTING.DATAADMIN.ADDRESS_DIM(
+create or replace view ADDRESS_DIM(
 	ADDRESS_DIM_PK,
 	ADDRESS_DIM_NK,
 	ADDRESS,

@@ -1,4 +1,4 @@
-create or replace TABLE PRD_HOSPENG_REPORTING.DATAADMIN.ERROR_LOGS (
+create or replace TABLE ERROR_LOGS (
 	ID VARCHAR(16777216) NOT NULL DEFAULT UUID_STRING() COMMENT 'Unique identifier for each error log entry.',
 	EVENT_TIMESTAMP TIMESTAMP_NTZ(9) DEFAULT CURRENT_TIMESTAMP() COMMENT 'Timestamp when the error event occurred.',
 	PARENT_QUERY_ID VARCHAR(16777216) COMMENT 'The query_id associated with the task run in the Snowflake UI.',

@@ -1,4 +1,4 @@
-create or replace view PRD_HOSPENG_REPORTING.DATAADMIN.SHIFT_DIM(
+create or replace view SHIFT_DIM(
 	SHIFT_DIM_PK,
 	SHIFT_DIM_NK,
 	SHIFT,

@@ -1,4 +1,4 @@
-create or replace view PRD_HOSPENG_REPORTING.DATAADMIN.TAXRATE_DIM(
+create or replace view TAXRATE_DIM(
 	TAXRATE_DIM_PK,
 	TAXRATE_DIM_NK,
 	TAXRATE,

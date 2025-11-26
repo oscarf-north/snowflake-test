@@ -1,4 +1,4 @@
-create or replace view PRD_HOSPENG_REPORTING.DATAADMIN.FEETAX_FACT(
+create or replace view FEETAX_FACT(
 	FEETAX_FACT_PK,
 	FEETAX_FACT_NK,
 	FEENAME,

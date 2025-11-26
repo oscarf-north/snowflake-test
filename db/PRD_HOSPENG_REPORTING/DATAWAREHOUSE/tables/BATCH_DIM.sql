@@ -1,4 +1,4 @@
-create or replace TABLE PRD_HOSPENG_REPORTING.DATAWAREHOUSE.BATCH_DIM (
+create or replace TABLE BATCH_DIM (
 	BATCH_DIM_PK NUMBER(38,0) autoincrement start 1 increment 1 noorder,
 	BATCH_DIM_NK VARCHAR(16777216),
 	BATCH_NUMBER NUMBER(38,0),
