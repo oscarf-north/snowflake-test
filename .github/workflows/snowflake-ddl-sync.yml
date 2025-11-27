@@ -31,7 +31,7 @@ jobs:
 
       - name: Run Snowflake → Git sync
         env:
-          GITHUB_TOKEN:         ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_REPOSITORY:    ${{ secrets.GITHUB_REPOSITORY }}
+          GH_TOKEN:         ${{ secrets.GH_TOKEN }}
+          GH_REPOSITORY:    ${{ secrets.GH_REPOSITORY }}
         run: |
           python src.sync.py --source --commit

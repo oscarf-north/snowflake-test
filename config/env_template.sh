@@ -8,6 +8,6 @@ export SNOWFLAKE_DATABASE=""
 export SNOWFLAKE_SCHEMA=""
 
 # === GitHub ===
-export GITHUB_PAT=""
-export GITHUB_REPO=""
-export GITHUB_ORG=""
+export GH_PAT=""
+export GH_REPO=""
+export GH_ORG=""

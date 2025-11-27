@@ -12,14 +12,14 @@ def _get_repository_from_env() -> Optional[str]:
     Resolve the repository name in the form 'owner/repo'.
 
     Priority:
-    1) GITHUB_REPO          (explicitly set by us)
-    2) GITHUB_REPOSITORY    (standard in GitHub Actions)
+    1) GH_REPO          (explicitly set by us)
+    2) GH_REPOSITORY    (standard in GitHub Actions)
     
-    repo = os.getenv("GITHUB_REPO")
+    repo = os.getenv("GH_REPO")
     if repo:
         return repo
     """
-    repo = os.getenv("GITHUB_REPOSITORY")
+    repo = os.getenv("GH_REPOSITORY")
     if repo:
         return repo
 
@@ -28,25 +28,25 @@ def _get_repository_from_env() -> Optional[str]:
 
 def _configure_remote_if_needed() -> None:
     """
-    If GITHUB_TOKEN and repository are available in env vars, configure
+    If GH_TOKEN and repository are available in env vars, configure
     the 'origin' remote to use an HTTPS URL with the token embedded.
 
     - In CI (GitHub Actions), we expect:
-        GITHUB_TOKEN      → automatically provided or passed from secrets
-        GITHUB_REPOSITORY → e.g. 'oscarjos/my-sf-sync'
+        GH_TOKEN      → automatically provided or passed from secrets
+        GH_REPOSITORY → e.g. 'oscarjos/my-sf-sync'
 
     - Locally, you can source env_local.sh to define:
-        GITHUB_TOKEN
-        GITHUB_REPO
+        GH_TOKEN
+        GH_REPO
 
     If no token/repo is found, do nothing and rely on local git config.
     """
-    token = os.getenv("GITHUB_TOKEN")
+    token = os.getenv("GH_TOKEN")
     repo = _get_repository_from_env()
 
     if not token or not repo:
         # No explicit token/repo → rely on whatever git is already using
-        print("No GITHUB_TOKEN / GITHUB_REPO found; using existing git remote configuration.")
+        print("No GH_TOKEN / GH_REPO found; using existing git remote configuration.")
         return
 
     url = f"https://x-access-token:{token}@github.com/{repo}.git"
@@ -77,7 +77,7 @@ def commit_changes(message: str) -> None:
     """
     Stage `db/` folder, commit with the given message, and push.
 
-    - Uses env-based GitHub remote if GITHUB_TOKEN is set.
+    - Uses env-based GitHub remote if GH_TOKEN is set.
     - Otherwise, relies on the existing git configuration (SSH or HTTPS).
 
     This function is called from src/sync.py when `--commit` is passed.

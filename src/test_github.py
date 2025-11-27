@@ -2,12 +2,12 @@ import os
 import requests
 
 def test_github_connection():
-    token = os.getenv("GITHUB_TOKEN")
-    user = os.getenv("GITHUB_ORG")
-    repo = os.getenv("GITHUB_REPO")
+    token = os.getenv("GH_TOKEN")
+    user = os.getenv("GH_ORG")
+    repo = os.getenv("GH_REPO")
 
     if not token or not user or not repo:
-        return "❌ Missing required environment variables: GITHUB_PAT, GITHUB_USER, GITHUB_REPO"
+        return "❌ Missing required environment variables: GH_PAT, GH_USER, GH_REPO"
 
     url = f"https://api.github.com/repos/{user}/{repo}"
     headers = {"Authorization": f"token {token}"}
