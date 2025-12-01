@@ -6,3 +6,4 @@ test.py
 __pycache__/
 .venv/
 *.pem
+cleanup_error_files.py

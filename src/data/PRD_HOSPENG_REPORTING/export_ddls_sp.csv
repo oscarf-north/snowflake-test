@@ -1,0 +1,2122 @@
+OBJECT_TYPE,SCHEMA_NAME,OBJECT_NAME,DDL
+PROCEDURE,DATAADMIN,SP_DAG_CHECKNEGONE_ALL(),"CREATE OR REPLACE PROCEDURE ""SP_DAG_CHECKNEGONE_ALL""()
+RETURNS VARCHAR
+LANGUAGE SQL
+EXECUTE AS OWNER
+AS '
+DECLARE
+     -- Runtime metadata
+    run_metadata VARIANT;
+    --error handling vars
+    failed_query_id VARCHAR;
+    details_json VARIANT;
+    failure_count NUMBER;
+    error_message_summary VARCHAR;
+BEGIN
+    CALL dataadmin.sp_get_dag_run_metadata(COALESCE(last_query_id(), ''NOT_FOUND'')) INTO :run_metadata;
+
+    --TODO add query tags in future sprints
+
+    CALL dataadmin.SP_CHECKNEGONE_ALL();
+    failed_query_id := COALESCE(last_query_id(), ''NOT_FOUND'');
+
+    -- 3. Analyze the results from the last query (the CALL statement)
+    -- We create a temporary table of only the failures.
+    CREATE OR REPLACE TEMPORARY TABLE failed_dq_checks AS
+    SELECT *
+    FROM TABLE(RESULT_SCAN(:failed_query_id))
+    WHERE COUNTVAL <> 1;
+
+    -- 4. Count the number of failures
+    SELECT COUNT(*) INTO :failure_count FROM failed_dq_checks;
+
+    IF (:failure_count > 0) THEN
+
+        error_message_summary := ''DQ Check Failed: '' || :failure_count || '' dimension table(s) have an incorrect count for the -1 record.'';
+
+        details_json := (SELECT OBJECT_CONSTRUCT(
+            ''query_output'', ARRAY_AGG(OBJECT_CONSTRUCT(*))
+            )
+            FROM failed_dq_checks);
+
+        -- Insert a SINGLE row into the error log table
+        INSERT INTO dataadmin.error_logs (
+            parent_query_id,
+            task_run_group_id,
+            attempt_number,
+            session_id,
+            task_name,
+            failed_query_id,
+            error_type_id,
+            severity,
+            sql_error_message,
+            details
+        )
+        SELECT 
+            :run_metadata:parent_query_id::VARCHAR,
+            :run_metadata:graph_run_group_id::VARCHAR,
+            :run_metadata:run_attempt_number::NUMBER,
+            :run_metadata:session_id::VARCHAR,
+            :run_metadata:task_name::VARCHAR,
+            :failed_query_id,
+            3, -- Data Quality Issue
+            ''WARN'',
+            :error_message_summary,
+            :details_json
+        ;
+
+        RETURN ''Data quality issues found and logged: '' || :failure_count || '' tables failed.'';
+    ELSE
+        RETURN ''Data quality check passed. No issues found.'';
+    END IF;
+
+END;
+';"
+PROCEDURE,DATAADMIN,"SP_DATASHARE_CRAFTABLE_DISCOUNT(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_DATASHARE_CRAFTABLE_DISCOUNT(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_DATAWAREHOUSE_DASHBOARD_SHIFT(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_DATAWAREHOUSE_DASHBOARD_SHIFT(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_LOADSTAGETABLES_ALL(),"CREATE OR REPLACE PROCEDURE ""SP_LOADSTAGETABLES_ALL""()
+RETURNS TABLE ()
+LANGUAGE SQL
+EXECUTE AS OWNER
+AS 'DECLARE 
+    SQLStmt resultset;
+    SQLMessage resultset := (SELECT ''Stage load comlete.'' );
+--========================================================================================================
+--Get all of the Load Sprocs
+--========================================================================================================
+-- --Put all of the sprocs into a list
+-- drop table proclist;
+-- SHOW PROCEDURES;
+
+-- CREATE TEMP TABLE proclist AS
+--      SELECT * FROM TABLE(RESULT_SCAN(LAST_QUERY_ID()));
+
+-- select * from proclist;
+
+-- SELECT ''CALL '' || ""schema_name"" || ''.'' || ""name"" || ''(TRUE);'' as sqltext
+--   FROM proclist
+-- WHERE ""schema_name"" = ''DATAADMIN''
+--   AND ""name"" ilike ''SP_STAGELOAD%''
+--   AND ""name"" not ilike ''%ERROR%''
+-- ;
+
+  -- CALL DATAADMIN.SP_STAGELOADCASHPAYMENTLEDGER_FACT(TRUE);
+  -- TRUNCATE TABLE DATAWAREHOUSE_TEMP.CASHPAYMENTLEDGER_FACT;
+  --SELECT COUNT(*) FROM DATAADMIN.ADDRESS_DIM;   --1850
+   --SELECT COUNT(*) FROM DATAWAREHOUSE_TEMP.ADDRESS_DIM; 
+    -- TRUNCATE TABLE DATAWAREHOUSE_TEMP.ADDRESS_DIM;
+ ----------------------------------------------------------------------------------------------------------- 
+BEGIN 
+
+CALL DATAADMIN.SP_STAGELOADACTIVITY_FACT(TRUE);
+CALL DATAADMIN.SP_STAGELOADADDRESS_DIM(TRUE);
+CALL DATAADMIN.SP_STAGELOADBATCH_DIM(TRUE);
+CALL DATAADMIN.SP_STAGELOADCASHBANKEVENT_FACT(TRUE);
+CALL DATAADMIN.SP_STAGELOADCASHBANK_DIM(TRUE);
+CALL DATAADMIN.SP_STAGELOADCASHPAYMENTLEDGER_FACT(TRUE);
+CALL DATAADMIN.SP_STAGELOADCCTRANSACTION_FACT(TRUE);
+CALL DATAADMIN.SP_STAGELOADCHECKCASHPAYMENTLEDGER_FACT(TRUE);
+CALL DATAADMIN.SP_STAGELOADCHEQUE_FACT(TRUE);
+CALL DATAADMIN.SP_STAGELOADCLOSEOUTSUMMARY_FACT(TRUE);
+CALL DATAADMIN.SP_STAGELOADCOGSCATEGORY_DIM(TRUE);
+CALL DATAADMIN.SP_STAGELOADDAYPART_DIM(TRUE);
+CALL DATAADMIN.SP_STAGELOADDAYPARTSCHEDULE_DIM(TRUE);
+CALL DATAADMIN.SP_STAGELOADDISCOUNTCHECK_FACT(TRUE);
+CALL DATAADMIN.SP_STAGELOADDISCOUNTITEM_FACT(TRUE);
+CALL DATAADMIN.SP_STAGELOADDISCOUNTREASON_DIM(TRUE);
+CALL DATAADMIN.SP_STAGELOADDRAWER_DIM(TRUE);
+CALL DATAADMIN.SP_STAGELOADEMPLOYEE_DIM(TRUE);
+CALL DATAADMIN.SP_STAGELOADEMPLOYMENTPERIOD_DIM(TRUE);
+CALL DATAADMIN.SP_STAGELOADFEETAX_FACT(TRUE);
+CALL DATAADMIN.SP_STAGELOADTAX_FACT(TRUE);
+CALL DATAADMIN.SP_STAGELOADGIFTCARDACTIVITY_FACT(TRUE);
+CALL DATAADMIN.SP_STAGELOADGIFTCARDTRANSACTION_FACT(TRUE);
+CALL DATAADMIN.SP_STAGELOADGIFTCARD_DIM(TRUE);
+
+
+CALL DATAADMIN.SP_STAGELOADITEM_FACT(TRUE);
+CALL DATAADMIN.SP_STAGELOADJOBPOSITION_DIM(TRUE);
+CALL DATAADMIN.SP_STAGELOADLOCATIONGROUP_DIM(TRUE);
+CALL DATAADMIN.SP_STAGELOADLOCATION_DIM(TRUE);
+CALL DATAADMIN.SP_STAGELOADLOCATION_LOCATIONGROUP_XREF(TRUE);
+CALL DATAADMIN.SP_STAGELOADMENUGROUP_DIM(TRUE);
+CALL DATAADMIN.SP_STAGELOADMENUITEMNAME_DIM(TRUE);
+CALL DATAADMIN.SP_STAGELOADMENUITEM_DIM(TRUE);
+CALL DATAADMIN.SP_STAGELOADMENUITEM_MENUGROUP_XREF(TRUE);
+
+CALL DATAADMIN.SP_STAGELOADINTEGRATIONTYPE_DIM(TRUE);
+CALL DATAADMIN.SP_STAGELOADINTEGRATION_FACT(TRUE);
+
+CALL DATAADMIN.SP_STAGELOADITEMMODIFIER_DIM(TRUE);
+CALL DATAADMIN.SP_STAGELOADMERCHANT_ORGANIZATION_XREF(TRUE);
+CALL DATAADMIN.SP_STAGELOADMERCHANT_DIM(TRUE);
+CALL DATAADMIN.SP_STAGELOADMODIFIER_DIM(TRUE);
+CALL DATAADMIN.SP_STAGELOADMODIFIEROPTIONS_DIM(TRUE);
+
+
+CALL DATAADMIN.SP_STAGELOADORDERTYPE_DIM(TRUE);
+CALL DATAADMIN.SP_STAGELOADORGANIZATION_DIM(TRUE);
+CALL DATAADMIN.SP_STAGELOADOVERTIMELABORRULE_DIM(TRUE);
+CALL DATAADMIN.SP_STAGELOADOVERTIMELABORRULE_JOBPOSITION_XREF(TRUE);
+CALL DATAADMIN.SP_STAGELOADPAYINOUT_FACT(TRUE);
+CALL DATAADMIN.SP_STAGELOADPAYINPAYOUTREASON_DIM(TRUE);
+CALL DATAADMIN.SP_STAGELOADPAYMENTMETHOD_DIM(TRUE);
+CALL DATAADMIN.SP_STAGELOADPAYMENTS_FACT(TRUE);
+CALL DATAADMIN.SP_STAGELOADPHONENUMBER_DIM(TRUE);
+CALL DATAADMIN.SP_STAGELOADREFUNDS_FACT(TRUE);
+CALL DATAADMIN.SP_STAGELOADREPORTCATEGORY_DIM(TRUE);
+CALL DATAADMIN.SP_STAGELOADREVENUECENTER_DIM(TRUE);
+CALL DATAADMIN.SP_STAGELOADSHIFTBREAK_FACT(TRUE);
+CALL DATAADMIN.SP_STAGELOADSHIFT_DIM(TRUE);
+CALL DATAADMIN.SP_STAGELOADSTANDARDDISCOUNT_DIM(TRUE);
+CALL DATAADMIN.SP_STAGELOADSURCHARGE_DIM(TRUE);
+CALL DATAADMIN.SP_STAGELOADSURCHARGE_FACT(TRUE);
+CALL DATAADMIN.SP_STAGELOADTAXASSOCIATION_DIM(TRUE);
+CALL DATAADMIN.SP_STAGELOADTAXASSOCIATION_MENUITEM_XREF(TRUE);
+CALL DATAADMIN.SP_STAGELOADTAXRATE_DIM(TRUE);
+CALL DATAADMIN.SP_STAGELOADTAXSETTINGS_DIM(TRUE);
+CALL DATAADMIN.SP_STAGELOADTAX_FACT(TRUE);
+CALL DATAADMIN.SP_STAGELOADTERMINAL_DIM(TRUE);
+CALL DATAADMIN.SP_STAGELOADVARIANT_DIM(TRUE);
+CALL DATAADMIN.SP_STAGELOADVOIDREASON_DIM(TRUE);
+
+
+    RETURN TABLE(SQLMessage);
+
+END';"
+PROCEDURE,DATAADMIN,"SP_LOAD_HARRI_SALES(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_LOAD_HARRI_SALES(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_REPORT_GIFTCARDAGING(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_REPORT_GIFTCARDAGING(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_REPORT_LABOR(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_REPORT_LABOR(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_REPORT_TIPGRAT(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_REPORT_TIPGRAT(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_STAGELOADADDRESS_DIM(VALIDATE_DATE BOOLEAN),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_STAGELOADADDRESS_DIM(VALIDATE_DATE BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_STAGELOADMENUGROUP_DIM(VALIDATE_DATE BOOLEAN),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_STAGELOADMENUGROUP_DIM(VALIDATE_DATE BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_STAGELOADTAXRATE_DIM(VALIDATE_DATE BOOLEAN),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_STAGELOADTAXRATE_DIM(VALIDATE_DATE BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_LOAD_DATASHARE_CRAFTABLE_CHECK(START_DATE VARCHAR, END_DATE VARCHAR, LOCATION_IDS VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_LOAD_DATASHARE_CRAFTABLE_CHECK(START_DATE VARCHAR, END_DATE VARCHAR, LOCATION_IDS VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_REPORT_DISCOUNT_DIANESESSION(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_REPORT_DISCOUNT_DIANESESSION(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_REPORT_VOID_0001_NEW(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_REPORT_VOID_0001_NEW(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_STAGELOADCCTRANSACTION_FACT(VALIDATE_DATE BOOLEAN),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_STAGELOADCCTRANSACTION_FACT(VALIDATE_DATE BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_STAGELOADGIFTCARDTRANSACTION_FACT(VALIDATE_DATE BOOLEAN),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_STAGELOADGIFTCARDTRANSACTION_FACT(VALIDATE_DATE BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_STAGELOADREVENUECENTER_DIM(VALIDATE_DATE BOOLEAN),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_STAGELOADREVENUECENTER_DIM(VALIDATE_DATE BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_STAGELOADSHIFTBREAK_FACT(VALIDATE_DATE BOOLEAN),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_STAGELOADSHIFTBREAK_FACT(VALIDATE_DATE BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_STAGELOADSURCHARGE_DIM(VALIDATE_DATE BOOLEAN),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_STAGELOADSURCHARGE_DIM(VALIDATE_DATE BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_STAGELOADSURCHARGE_FACT(VALIDATE_DATE BOOLEAN),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_STAGELOADSURCHARGE_FACT(VALIDATE_DATE BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_STAGELOADVARIANT_DIM(VALIDATE_DATE BOOLEAN),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_STAGELOADVARIANT_DIM(VALIDATE_DATE BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_TEST_LABOR(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_TEST_LABOR(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_STAGELOADMENUITEMNAME_DIM(VALIDATE_DATE BOOLEAN),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_STAGELOADMENUITEMNAME_DIM(VALIDATE_DATE BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_STAGELOADMODIFIEROPTIONS_DIM(VALIDATE_DATE BOOLEAN),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_STAGELOADMODIFIEROPTIONS_DIM(VALIDATE_DATE BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_STAGELOADTAXASSOCIATION_DIM(VALIDATE_DATE BOOLEAN),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_STAGELOADTAXASSOCIATION_DIM(VALIDATE_DATE BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_ACCOUNTINGSUMMARY_PAYMENTS_BOTTOM(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_ACCOUNTINGSUMMARY_PAYMENTS_BOTTOM(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_CHECKFORFOREIGNKEY(REPORTTYPE VARCHAR, TABLENAME VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_CHECKFORFOREIGNKEY(REPORTTYPE VARCHAR, TABLENAME VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_DATASHARE_CRAFTABLE_VOID(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_DATASHARE_CRAFTABLE_VOID(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_LOAD_COMPEAT_XML(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_LOAD_COMPEAT_XML(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_LOAD_DATASHARE_CRAFTABLE_LABOR(START_DATE VARCHAR, END_DATE VARCHAR, LOCATION_IDS VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_LOAD_DATASHARE_CRAFTABLE_LABOR(START_DATE VARCHAR, END_DATE VARCHAR, LOCATION_IDS VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_REPORT_CASH(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_REPORT_CASH(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_CHECKNEGONE_ALL(),"CREATE OR REPLACE PROCEDURE ""SP_CHECKNEGONE_ALL""()
+RETURNS TABLE ()
+LANGUAGE SQL
+EXECUTE AS OWNER
+AS 'DECLARE 
+    SQLStmt resultset;
+    ScriptIns varchar;
+    SQLTextOut varchar;
+    SQLIns varchar;
+    SCRIPT resultset;
+    BIGSCRIPTS resultset;
+
+-----------------------------------------------------------------------------------------------------------
+BEGIN
+   --drop temp tables if they exist
+   drop table if exists dwtable_lists; 
+   drop table if exists dwtable_scripts; 
+
+   create table dwtable_scripts (
+     nameval varchar (100) 
+     ,countval number
+  );
+  -- SELECT ''ADDRESS_DIM'' AS NAMEVAL,COUNT(*) AS COUNTVAL FROM  DATAWAREHOUSE.ADDRESS_DIM WHERE ADDRESS_DIM_pk = -1;
+  --create a table containing rows with the call statements to create the load stored procedures
+SELECT REPLACE(''SELECT \\''<TABLENAME>\\'' AS NAMEVAL,COUNT(*) AS COUNTVAL FROM  DATAWAREHOUSE.<TABLENAME> WHERE <TABLENAME>_pk = -1;''
+       ,''<TABLENAME>'',TABLE_NAME) AS sqltext
+  FROM information_schema.tables 
+   WHERE TABLE_SCHEMA = ''DATAWAREHOUSE''
+     AND TABLE_TYPE = ''BASE TABLE''
+     AND TABLE_NAME ILIKE ''%_DIM''
+     AND TABLE_NAME NOT IN  (''DATASHARETEST_DIM'',''DATE_DIM'',''ORDER_SUMMARY'',''ERRORDWDATE_DIM'');
+   
+   CREATE TABLE dwtable_lists AS
+     SELECT * FROM TABLE(RESULT_SCAN(LAST_QUERY_ID()));
+
+
+  SQLStmt := (select * from dwtable_lists);
+
+  --loop through all rows that create the load stored proceedure 1 per table
+      BEGIN
+          FOR record IN SQLStmt DO
+            SQLTextOut := record.sqltext;
+            SCRIPT := (EXECUTE IMMEDIATE record.sqltext);           
+            INSERT INTO dwtable_scripts(nameval,countval) 
+                    SELECT NAMEVAL,COUNTVAL FROM TABLE(RESULT_SCAN(LAST_QUERY_ID()));
+          END FOR;
+     END;
+
+  BIGSCRIPTS := (SELECT * from dwtable_scripts order by countval desc);   
+  RETURN TABLE(BIGSCRIPTS);
+  
+END';"
+PROCEDURE,DATAADMIN,"SP_DATASHARE_CRAFTABLE_PAYMENTS(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_DATASHARE_CRAFTABLE_PAYMENTS(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_GET_DAG_RUN_METADATA(PARENT_QUERY_ID VARCHAR),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_GET_DAG_RUN_METADATA(PARENT_QUERY_ID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_LOADDIMENSIONNONEROW(TABLENAME VARCHAR),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_LOADDIMENSIONNONEROW(TABLENAME VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_LOAD_365_DISCOUNTS(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_LOAD_365_DISCOUNTS(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_LOAD_365_LABORDETAIL(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_LOAD_365_LABORDETAIL(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_LOAD_365_PAYMENTS(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_LOAD_365_PAYMENTS(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_LOAD_DATASHARE_ITEMS(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_LOAD_DATASHARE_ITEMS(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_REPORT_ACCOUNTSUMMARY_PAYMENTS_GIFTCARDS(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_REPORT_ACCOUNTSUMMARY_PAYMENTS_GIFTCARDS(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_REPORT_REFUNDS(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_REPORT_REFUNDS(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_STAGELOADORDERTYPE_DIM(VALIDATE_DATE BOOLEAN),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_STAGELOADORDERTYPE_DIM(VALIDATE_DATE BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_STAGELOADPAYMENTMETHOD_DIM(VALIDATE_DATE BOOLEAN),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_STAGELOADPAYMENTMETHOD_DIM(VALIDATE_DATE BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_STAGELOADPHONENUMBER_DIM(VALIDATE_DATE BOOLEAN),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_STAGELOADPHONENUMBER_DIM(VALIDATE_DATE BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_STAGELOADTAXSETTINGS_DIM(VALIDATE_DATE BOOLEAN),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_STAGELOADTAXSETTINGS_DIM(VALIDATE_DATE BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_UTILITY_DEPENDENCIES(),"CREATE OR REPLACE PROCEDURE ""SP_UTILITY_DEPENDENCIES""()
+RETURNS TABLE ()
+LANGUAGE SQL
+EXECUTE AS OWNER
+AS '
+--============================================================================================
+--Procedure to pull the dependent tables of all the views in public ending with _DIM/_FACT/_XREF
+declare
+--Declaring variables
+  select_statement varchar;
+  res resultset;
+begin
+--Sql statement to pull the dependent tables of all the views in public ending with _DIM/_FACT/_XREF
+select_statement := (SELECT listagg(stmt, '''') as statment_text FROM (SELECT
+     ''SELECT * from table(get_object_references(database_name=>\\''DEV_HOSPENG_REPORTING\\'', schema_name=>\\''DATAADMIN\\'', object_name=> \\'''' || table_name || ''\\''))''
+      || CASE WHEN row_num < max(row_num) over()
+            THEN '' UNION ''
+        ELSE '' ''
+      END as stmt
+      FROM (SELECT TABLE_NAME
+            ,rank() over (ORDER BY table_name) as row_num
+            FROM INFORMATION_SCHEMA.TABLES
+            WHERE TABLE_SCHEMA = ''DATAADMIN'' and
+                  (TABLE_NAME like ''%_DIM'' or
+                  TABLE_NAME like ''%_FACT'' or
+                  TABLE_NAME like ''%_XREF''))));
+--Executing the variable which is the sql statement
+res := (execute immediate : select_statement);
+--Returning the variable which is the result of sql statement
+return table(res);
+end;
+';"
+PROCEDURE,DATAADMIN,"SP_LOAD_DATASHARE_CRAFTABLE_FEE(START_DATE VARCHAR, END_DATE VARCHAR, LOCATION_IDS VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_LOAD_DATASHARE_CRAFTABLE_FEE(START_DATE VARCHAR, END_DATE VARCHAR, LOCATION_IDS VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_REPORT_ACCOUNTSUMMARY_PAYMENTS_PAYINOUT(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_REPORT_ACCOUNTSUMMARY_PAYMENTS_PAYINOUT(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_REPORT_LABOR_NEW(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_REPORT_LABOR_NEW(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_REPORT_TENDER_0001(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_REPORT_TENDER_0001(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_REPORT_VOID(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_REPORT_VOID(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_SEND_ERROR_TYPES_OVER_SLACK(CHANNEL VARCHAR, ERROR_TYPES ARRAY)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_SEND_ERROR_TYPES_OVER_SLACK(CHANNEL VARCHAR, ERROR_TYPES ARRAY)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_STAGELOADDRAWER_DIM(VALIDATE_DATE BOOLEAN),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_STAGELOADDRAWER_DIM(VALIDATE_DATE BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_STAGELOADINTEGRATIONTYPE_DIM(VALIDATE_DATE BOOLEAN),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_STAGELOADINTEGRATIONTYPE_DIM(VALIDATE_DATE BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_STAGELOADMERCHANT_ORGANIZATION_XREF(VALIDATE_DATE BOOLEAN),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_STAGELOADMERCHANT_ORGANIZATION_XREF(VALIDATE_DATE BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_STAGELOADSHIFT_DIM(VALIDATE_DATE BOOLEAN),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_STAGELOADSHIFT_DIM(VALIDATE_DATE BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_STAGELOADDAYPARTSCHEDULE_DIM(VALIDATE_DATE BOOLEAN),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_STAGELOADDAYPARTSCHEDULE_DIM(VALIDATE_DATE BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"GET_ENTIRE_ROW_DUPLICATES(DB_NAME VARCHAR, SCHEMA_NAME VARCHAR, TARGET_TABLES ARRAY, EVALUATE_PK BOOLEAN)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.GET_ENTIRE_ROW_DUPLICATES(DB_NAME VARCHAR, SCHEMA_NAME VARCHAR, TARGET_TABLES ARRAY, EVALUATE_PK BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_CHECKFORNK(REPORTTYPE VARCHAR, TABLENAME VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_CHECKFORNK(REPORTTYPE VARCHAR, TABLENAME VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_CREATEDWTABLELOAD(TABLENAME VARCHAR),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_CREATEDWTABLELOAD(TABLENAME VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_DQ_TAX_ARRAY_ISSUE(),"CREATE OR REPLACE PROCEDURE ""SP_DQ_TAX_ARRAY_ISSUE""()
+RETURNS VARCHAR
+LANGUAGE SQL
+EXECUTE AS OWNER
+AS '
+DECLARE
+    -- Runtime metadata
+    run_metadata VARIANT;
+    parent_query_id VARCHAR;
+    task_run_group_id VARCHAR;
+    attempt_number NUMBER;
+    session_id VARCHAR;
+    task_name VARCHAR;
+
+    -- Procedure specific variables
+    yesterday_date DATE;
+    validation_query_id VARCHAR;
+    row_count NUMBER;
+    error_message VARCHAR;
+
+BEGIN
+    -- Get runtime metadata for logging and traceability
+    CALL dataadmin.sp_get_dag_run_metadata(COALESCE(last_query_id(), ''NOT_FOUND'')) INTO :run_metadata;
+    parent_query_id := :run_metadata:parent_query_id::VARCHAR;
+    task_run_group_id := :run_metadata:graph_run_group_id::VARCHAR;
+    attempt_number := :run_metadata:run_attempt_number::NUMBER;
+    session_id := :run_metadata:session_id::VARCHAR;
+    task_name := COALESCE(:run_metadata:task_name::VARCHAR, ''sp_dq_tax_array_issue'');
+
+    -- Set the target date for the validation
+    yesterday_date := DATEADD(day, -1, CURRENT_DATE());
+
+    -- run validation and store it in a temp table
+    WITH main_query AS (
+        SELECT
+            CHK.LOCATION_DIM_FK AS LOCATION_DIM_FK,
+            CHK.FISCAL_DATE AS FISCAL_DATE,
+            POS.ID AS cheque_id,
+            TRY_PARSE_JSON(POS.BALANCE):tax::DECIMAL(10, 2) AS balance_tax,
+            COALESCE(SUM(CASE 
+                             WHEN ITM.value:status::STRING IN (''Added'', ''Sent'') 
+                             THEN TAX.value:tax::DECIMAL(10, 2) 
+                             ELSE 0 
+                         END), 0) AS calculated_items_tax_total,
+            abs(balance_tax - calculated_items_tax_total) AS delta
+        FROM
+            DATALANDING.POSAPI_PUBLIC_CHEQUE POS
+            -- (select * FROM DATALANDING.POSAPI_PUBLIC_CHEQUE  WHERE ITEMS <> ''__value_not_modified__'') POS --to exclude non toast column issue
+        INNER JOIN
+            (
+                SELECT CHEQUE_FACT_NK, MTLN_CDC_SEQUENCE_NUMBER, FISCAL_DATE, LOCATION_DIM_FK
+                FROM DATAWAREHOUSE.CHEQUE_FACT
+                WHERE DW_ISCURRENTROW
+                AND FISCAL_DATE = :yesterday_date -- Parameterized date
+                AND STATUS IN(''Closed'')
+            ) CHK ON POS.ID = CHK.CHEQUE_FACT_NK AND POS.MTLN_CDC_SEQUENCE_NUMBER = CHK.MTLN_CDC_SEQUENCE_NUMBER
+        , LATERAL FLATTEN(INPUT => TRY_PARSE_JSON(POS.ITEMS), OUTER => TRUE) ITM
+        , LATERAL FLATTEN(INPUT => ITM.value:taxes, OUTER => TRUE) TAX
+        GROUP BY 1,2,3,4
+    )
+    SELECT 
+        LOCATION_DIM_FK,
+        FISCAL_DATE,
+        delta
+    FROM main_query
+    WHERE delta > 0;
+
+    validation_query_id := last_query_id();
+
+     CREATE OR REPLACE TEMP TABLE dq_tax_array_issue_results AS
+     SELECT * FROM TABLE(RESULT_SCAN(:validation_query_id)); 
+
+    SELECT COUNT(*) INTO :row_count FROM dq_tax_array_issue_results;
+
+    IF (row_count > 0) THEN
+        -- If there are deltas, construct the summary error message
+        -- We first need to aggregate the deltas per location, and then list-aggregate the results.
+        SELECT ''For '' || :yesterday_date || '' the following locations have deltas: '' ||
+               LISTAGG(location_summary, '' ; '') WITHIN GROUP (ORDER BY LOCATION_DIM_FK)
+        INTO :error_message
+        FROM (
+            SELECT 
+                LOCATION_DIM_FK,
+                LOCATION_DIM_FK || '': '' || SUM(delta) AS location_summary
+            FROM dq_tax_array_issue_results
+            GROUP BY LOCATION_DIM_FK
+        );
+
+        -- Log the single, summarized error message
+        INSERT INTO DATAADMIN.error_logs (
+            parent_query_id, task_run_group_id, attempt_number, session_id, task_name,
+            failed_query_id, error_type_id, severity, sql_error_code, sql_error_message, sql_state, details
+        )
+        SELECT
+            :parent_query_id, :task_run_group_id, :attempt_number, :session_id, :task_name,
+            :validation_query_id, 3, ''WARNING'', NULL, :error_message, NULL,
+            OBJECT_CONSTRUCT(''check_name'', ''sp_dq_tax_array_issue'', ''fiscal_date_checked'', :yesterday_date);
+
+        RETURN ''Data quality check failed. Details logged: '' || :error_message;
+    ELSE
+        -- If there are no deltas, return a success message
+        RETURN ''Data quality check passed for '' || :yesterday_date || ''. No tax calculation deltas found.'';
+    END IF;
+
+END;
+';"
+PROCEDURE,DATAADMIN,"SP_GETPERSPECTIVESCHEMA(SPROCNAME VARCHAR, STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_GETPERSPECTIVESCHEMA(SPROCNAME VARCHAR, STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_REPORT_USE(),"CREATE OR REPLACE PROCEDURE ""SP_REPORT_USE""()
+RETURNS TABLE ()
+LANGUAGE SQL
+EXECUTE AS OWNER
+AS '
+-- ====================================================================================================================
+DECLARE 
+  reportSet resultset;
+  -- startdate timestamp_tz := ''2000-11-20T14:48:37.661Z'';  
+  -- enddate timestamp_tz   := ''2023-11-20T14:48:37.661Z''; 
+  -- locationid number      :=  351;
+-- ====================================================================================================================
+--NOTE:  Change retention of execution value????  Or make Warehouse factg?
+--==========================================================================================
+BEGIN
+
+ reportSet   := (
+SELECT
+ARRAY_TO_STRING(ARRAY_SLICE(
+ STRTOK_TO_ARRAY(ARRAY_TO_STRING( ARRAY_SLICE(
+  STRTOK_TO_ARRAY(QRY.QUERY_TAG, ''&''), 3, 4)
+   , ''&reportId=''),''.'' ),1,2),'' ''	)
+
+                                                    as ""Report Name""
+,TO_DATE(QRY.START_TIME)							as ""Start Date"" 
+,QRY.START_TIME										as ""Start Time""
+,QRY.END_TIME								        as ""End Time""
+,QRY.QUERY_TAG										as ""Query Tag""
+,QRY.BYTES_SCANNED									as ""Bytes Scanned""
+,QRY.ROWS_PRODUCED									as ""Rows Produced""
+,QRY.QUERY_TEXT										as ""Query Text""
+,QRY.EXECUTION_STATUS								as ""Execution Status""
+,COALESCE(QRY.ERROR_CODE,0.00,''99.9'')				as ""Error Code""
+,COALESCE(QRY.ERROR_MESSAGE,''None'')					as ""Error Message""
+,QRY.COMPILATION_TIME								as ""Compilation Time""
+,QRY.EXECUTION_TIME									as ""Execution Time""
+,QRY.TOTAL_ELAPSED_TIME								as ""Total Elapsed Time""
+	FROM TABLE(INFORMATION_SCHEMA.QUERY_HISTORY_BY_USER(
+		USER_NAME => ''APP_AIRBYTE_HOSPENG''
+        --NOTE:  we have default time of 7 days to keep this history
+        --,END_TIME_RANGE_START=>to_timestamp_ltz(''2022-02-23 12:00:00.000 -0000'')
+        --,END_TIME_RANGE_END=>to_timestamp_ltz(''2023-12-12 12:00:00.000 -0000'')
+    ))                                                             QRY
+-- WHERE QRY.QUERY_TYPE = ''SELECT''
+--   AND QRY.QUERY_TAG LIKE ''REPORT%''
+ORDER BY QRY.START_TIME desc
+--==========================================================================================
+); 
+ RETURN TABLE(reportSet); 
+END;
+';"
+PROCEDURE,DATAADMIN,SP_STAGELOADCASHBANK_DIM(VALIDATE_DATE BOOLEAN),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_STAGELOADCASHBANK_DIM(VALIDATE_DATE BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"GET_TOP_10_DUPLICATE_ROWS_NOEXIST(DB_NAME VARCHAR, SCHEMA_NAME VARCHAR, TARGET_TABLES ARRAY, EVALUATE_PK BOOLEAN)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.GET_TOP_10_DUPLICATE_ROWS_NOEXIST(DB_NAME VARCHAR, SCHEMA_NAME VARCHAR, TARGET_TABLES ARRAY, EVALUATE_PK BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_CREATEDWTABLE_CREATEALL(),"CREATE OR REPLACE PROCEDURE ""SP_CREATEDWTABLE_CREATEALL""()
+RETURNS TABLE ()
+LANGUAGE SQL
+EXECUTE AS OWNER
+AS 'DECLARE 
+    SQLStmt resultset;
+    ScriptIns varchar;
+    SQLTextOut varchar;
+    SQLIns varchar;
+    SCRIPT resultset;
+    BIGSCRIPTS resultset;
+
+-----------------------------------------------------------------------------------------------------------
+BEGIN
+   --drop temp tables if they exist
+   drop table if exists dwtable_lists; 
+   drop table if exists dwtable_scripts;
+   create table dwtable_scripts (
+     name varchar (100) 
+     ,scripttext varchar
+  );
+
+   --create a table containing rows with the call statements to create the load stored procedures
+   SELECT 
+     REPLACE(''CALL DATAADMIN.SP_CreateDWTable(\\''DEV_HOSPENG_REPORTING\\'',\\''DATASTAGE\\'',\\''<TABLENAME>\\'')''
+       ,''<TABLENAME>'',TABLE_NAME) AS sqltext
+     FROM information_schema.tables t
+   WHERE TABLE_SCHEMA = ''DATAADMIN''
+     AND TABLE_TYPE = ''VIEW''
+     AND TABLE_NAME ILIKE ANY (''%_DIM'', ''%_FACT'',''%_XREF'')
+     AND TABLE_NAME NOT ILIKE (''DW_%'')
+     AND TABLE_NAME NOT ILIKE (''DW_%'')
+     AND TABLE_NAME  ILIKE ANY (''%_FACT'',''%_DIM'',''%_XREF'',''%_SUMMARY'')
+     AND TABLE_NAME NOT IN (''ORDER_SUMMARY'',''ERRORDWDATE_DIM'',''DATE_DIM'',''DATASHARETEST_DIM'',''ITEM_SALES'',''UPDATE_TABLE'',''DW_SQLPARAMETERS'');
+   
+   CREATE TABLE dwtable_lists AS
+     SELECT * FROM TABLE(RESULT_SCAN(LAST_QUERY_ID()));
+
+  SQLStmt := (select * from dwtable_lists);
+
+  --loop through all rows that create the load stored proceedure 1 per table
+      BEGIN
+          FOR record IN SQLStmt DO
+            SQLTextOut := record.sqltext;
+            SCRIPT := (EXECUTE IMMEDIATE record.sqltext);           
+            ScriptIns := (SELECT * FROM TABLE(RESULT_SCAN(LAST_QUERY_ID())));
+            INSERT INTO dwtable_scripts(scripttext)    
+                VALUES(:ScriptIns);   --works       
+          END FOR;
+     END;
+
+  BIGSCRIPTS := (SELECT listagg(scripttext) from dwtable_scripts);   
+  RETURN TABLE(BIGSCRIPTS);
+  
+END';"
+PROCEDURE,DATAADMIN,SP_GETPERSPECTIVESCHEMA(),"CREATE OR REPLACE PROCEDURE ""SP_GETPERSPECTIVESCHEMA""()
+RETURNS TABLE ()
+LANGUAGE SQL
+EXECUTE AS OWNER
+AS '
+--=================================================================================================================
+--This sproc creates the schema for a Perspective Report from the Source Data Stored Proceedure
+-- call SP_GetPerspectiveSchema;
+--=================================================================================================================
+--DECLARE varchar(500) sprocname = ''CALL DATAADMIN.SP_REPORT_PMIX(''2000-11-20T14:48:37.661Z'',''2023-11-20T14:48:37.661Z'',351)''
+DECLARE sprocName VARCHAR(500):= ''DATAADMIN.SP_REPORT_PMIX'';
+  startdate timestamp_tz :=      ''2000-11-20T14:48:37.661Z'';  
+  enddate timestamp_tz :=        ''2023-11-20T14:48:37.661Z''; 
+  locationid number :=            351;
+  dataout resultset;  
+
+BEGIN
+  drop table if exists schema_data; 
+  CALL DATAADMIN.SP_REPORT_PMIX(''2000-11-20T14:48:37.661Z'',''2023-11-20T14:48:37.661Z'',351) ;
+ 
+  CREATE TABLE schema_data AS
+    SELECT * FROM TABLE(RESULT_SCAN(LAST_QUERY_ID()));
+
+  ALTER TABLE schema_data ADD COLUMN MAXROW NUMBER;
+
+  dataout := (
+
+  SELECT   ''""schema"": {\\n''
+    || LISTAGG (''  '' || ''""'' 
+     || COLUMN_NAME 
+     || ''"" : '' 
+     || CASE DATA_TYPE 
+       WHEN ''TEXT'' THEN ''""str""'' 
+       WHEN ''NUMBER'' THEN ''""float""''
+       WHEN ''TIMESTAMP_TZ'' THEN ''""datetime""'' 
+       WHEN ''BOOLEAN'' THEN ''""bool""''
+      ELSE DATA_TYPE END 
+      || '','' 
+      || ''\\n''
+      ) || ''}''
+      AS DATA_TYPE 
+    FROM information_schema.columns 
+    WHERE table_name=''SCHEMA_DATA'' 
+    ORDER BY ORDINAL_POSITION
+    );
+    
+
+  return table(dataout);
+END
+';"
+PROCEDURE,DATAADMIN,SP_LISTSTRUCTURES(),"CREATE OR REPLACE PROCEDURE ""SP_LISTSTRUCTURES""()
+RETURNS TABLE (""Table Name"" VARCHAR(16777216), ""Conforming View"" VARCHAR(16777216), ""Data Warehouse Table"" VARCHAR(16777216), ""Procedure"" VARCHAR(16777216))
+LANGUAGE SQL
+EXECUTE AS OWNER
+AS 'DECLARE res_list resultset;
+
+BEGIN
+   --drop temp tables if they exist
+   drop table if exists dataadmin_list ; 
+   drop table if exists datawarehouse_list; 
+   drop table if exists procedure_list;
+   
+--Get list of datawarehouse tables
+SELECT  TABLE_NAME 
+     FROM information_schema.tables t
+   WHERE  TABLE_SCHEMA = ''DATAWAREHOUSE''
+     AND TABLE_TYPE    = ''BASE TABLE''
+     AND (TABLE_NAME ILIKE ''%_DIM''
+       OR TABLE_NAME ILIKE ''%_FACT''
+       OR TABLE_NAME ILIKE ''%_XREF'')
+ORDER BY T.TABLE_NAME  
+;
+
+CREATE TABLE datawarehouse_list AS
+     SELECT * FROM TABLE(RESULT_SCAN(LAST_QUERY_ID()));
+
+--Get list of admin tables
+SELECT  TABLE_NAME 
+     FROM information_schema.tables t
+   WHERE  TABLE_SCHEMA = ''DATAADMIN''
+     AND TABLE_TYPE    = ''VIEW''
+     AND (TABLE_NAME ILIKE ''%_DIM''
+       OR TABLE_NAME ILIKE ''%_FACT''
+       OR TABLE_NAME ILIKE ''%_XREF'')
+ORDER BY T.TABLE_NAME  
+;
+
+CREATE TABLE dataadmin_list AS
+     SELECT * FROM TABLE(RESULT_SCAN(LAST_QUERY_ID()));  
+
+     -- select * from dataadmin_list order by TABLE_NAME;  --47
+     -- select * from datawarehouse_list order by TABLE_NAME;  --13
+
+SHOW PROCEDURES LIKE ''SP_STAGELOAD%'' IN SCHEMA DATAADMIN;
+
+CREATE TABLE procedure_list AS
+     SELECT ""name"" as ""PROCEDURE"", REPLACE(""name"",''SP_STAGELOAD'','''') AS TABLE_NAME  FROM TABLE(RESULT_SCAN(LAST_QUERY_ID()));  
+
+--Compare the objects in daaadmin vs datawarehouse
+ 
+res_list  := (
+  SELECT TABLE_NAME     AS ""Table Name""
+    ,MAX(dataadmin)     AS ""Conforming View""
+    ,MAX(datawarehouse) AS ""Data Warehouse Table""
+    ,MAX(PROCEDURE)     AS ""Procedure""
+  -- ,CASE WHEN datawarehouse is NULL THEN ''MISSING'' ELSE ''FOUND'' END AS STATUSMESSAGE
+  FROM (
+        SELECT dal.TABLE_NAME, dal.TABLE_NAME AS dataadmin, NULL as datawarehouse, NULL as PROCEDURE
+          FROM dataadmin_list            dal
+        UNION
+        SELECT dwl.TABLE_NAME, NULL AS dataadmin, dwl.TABLE_NAME as datawarehouse, NULL as PROCEDURE
+         FROM datawarehouse_list   dwl
+        UNION
+        SELECT prl.TABLE_NAME, NULL AS dataadmin, NULL as datawarehouse, prl.PROCEDURE as PROCEDURE
+         FROM procedure_list   prl         
+        ) GROUP BY TABLE_NAME
+); 
+
+RETURN TABLE(res_list);
+--========================================================================================================================
+END';"
+PROCEDURE,DATAADMIN,SP_LOADALLDWTABLES(VALIDATE_DATE VARCHAR),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_LOADALLDWTABLES(VALIDATE_DATE VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_LOAD_365_SALESDETAIL(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_LOAD_365_SALESDETAIL(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_LOAD_DATASHARE_CRAFTABLE_ITEM(START_DATE VARCHAR, END_DATE VARCHAR, LOCATION_IDS VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_LOAD_DATASHARE_CRAFTABLE_ITEM(START_DATE VARCHAR, END_DATE VARCHAR, LOCATION_IDS VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_REPORT_ACCOUNTSUMMARY_PAYMENTS(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_REPORT_ACCOUNTSUMMARY_PAYMENTS(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_REPORT_CLOSE(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_REPORT_CLOSE(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_REPORT_PMIX_0001(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_REPORT_PMIX_0001(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_REPORT_TAX_DEBUG(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_REPORT_TAX_DEBUG(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_STAGELOADLOCATIONGROUP_DIM(VALIDATE_DATE BOOLEAN),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_STAGELOADLOCATIONGROUP_DIM(VALIDATE_DATE BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_STAGELOADMERCHANT_DIM(VALIDATE_DATE BOOLEAN),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_STAGELOADMERCHANT_DIM(VALIDATE_DATE BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_STAGELOADPAYINOUT_FACT(VALIDATE_DATE BOOLEAN),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_STAGELOADPAYINOUT_FACT(VALIDATE_DATE BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_DATASHARE_CRAFTABLE_GRATUITIES(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_DATASHARE_CRAFTABLE_GRATUITIES(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_LOADDIMENSIONNONEROW_ALL(),"CREATE OR REPLACE PROCEDURE ""SP_LOADDIMENSIONNONEROW_ALL""()
+RETURNS TABLE ()
+LANGUAGE SQL
+EXECUTE AS OWNER
+AS 'DECLARE 
+    SQLStmt resultset;
+    ScriptIns varchar;
+    SQLTextOut varchar;
+    SQLIns varchar;
+    SCRIPT resultset;
+    BIGSCRIPTS resultset;
+
+-----------------------------------------------------------------------------------------------------------
+BEGIN
+   --drop temp tables if they exist
+   drop table if exists dwtable_lists; 
+   drop table if exists dwtable_scripts; 
+
+   create temp table dwtable_scripts (
+     name varchar (100) 
+     ,scripttext varchar
+  );
+
+   --create a table containing rows with the call statements to create the load stored procedures
+   SELECT 
+     REPLACE(''CALL DATAADMIN.SP_LOADDIMENSIONNONEROW(\\''<TABLENAME>\\'')''
+       ,''<TABLENAME>'',TABLE_NAME) AS sqltext
+     FROM information_schema.tables t
+   WHERE TABLE_SCHEMA = ''DATAWAREHOUSE''
+     AND TABLE_TYPE = ''BASE TABLE''
+     --AND TABLE_NAME IN (''EMPLOYEE_DIM'',''ACTIVITY_FACT'')--WORKS ERROR MESSAGES ONLY
+     --AND TABLE_NAME IN (''LOCATION_DIM'',''SHIFT_DIM'')  --WORKS LOAD STMTS ONLY
+     --AND TABLE_NAME IN (''EMPLOYEE_DIM'',''LOCATION_DIM'')
+     AND TABLE_NAME ILIKE ''%_DIM''
+     AND TABLE_NAME NOT IN  (''DATASHARETEST_DIM'',''DATE_DIM'',''ORDER_SUMMARY'',''ERRORDWDATE_DIM'')
+ ;
+   
+   CREATE temp TABLE dwtable_lists AS
+     SELECT * FROM TABLE(RESULT_SCAN(LAST_QUERY_ID()));
+
+  SQLStmt := (select * from dwtable_lists);
+--CALL DATAADMIN.SP_LOADDIMENSIONNONEROW(''EMPLOYEE_DIM'')
+  --loop through all rows that create the load stored proceedure 1 per table
+      BEGIN
+          FOR record IN SQLStmt DO
+            SQLTextOut := record.sqltext;
+            SCRIPT := (EXECUTE IMMEDIATE record.sqltext);           
+            ScriptIns := (SELECT * FROM TABLE(RESULT_SCAN(LAST_QUERY_ID())));
+            INSERT INTO dwtable_scripts(scripttext)    
+                VALUES(:ScriptIns);   --works       
+          END FOR;
+     END;
+
+  BIGSCRIPTS := (SELECT listagg(scripttext) from dwtable_scripts);   
+  RETURN TABLE(BIGSCRIPTS);
+  
+END';"
+PROCEDURE,DATAADMIN,"SP_LOAD_365_TILL(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_LOAD_365_TILL(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_LOAD_DATASHARE_CRAFTABLE_PAYMENT(START_DATE VARCHAR, END_DATE VARCHAR, LOCATION_IDS VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_LOAD_DATASHARE_CRAFTABLE_PAYMENT(START_DATE VARCHAR, END_DATE VARCHAR, LOCATION_IDS VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_STAGELOADEMPLOYEE_DIM(VALIDATE_DATE BOOLEAN),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_STAGELOADEMPLOYEE_DIM(VALIDATE_DATE BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_STAGELOADINTEGRATION_FACT(VALIDATE_DATE BOOLEAN),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_STAGELOADINTEGRATION_FACT(VALIDATE_DATE BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_STAGELOADITEMMODIFIER_DIM(VALIDATE_DATE BOOLEAN),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_STAGELOADITEMMODIFIER_DIM(VALIDATE_DATE BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_STAGELOADMENUITEM_DIM(VALIDATE_DATE BOOLEAN),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_STAGELOADMENUITEM_DIM(VALIDATE_DATE BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_STAGELOADREPORTCATEGORY_DIM(VALIDATE_DATE BOOLEAN),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_STAGELOADREPORTCATEGORY_DIM(VALIDATE_DATE BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"FILTERBYROLE(TABLENAME VARCHAR, ROLE VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.FILTERBYROLE(TABLENAME VARCHAR, ROLE VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"GET_TOP_10_DUPLICATE_ROWS_2(DB_NAME VARCHAR, SCHEMA_NAME VARCHAR, TARGET_TABLES ARRAY, EVALUATE_PK BOOLEAN)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.GET_TOP_10_DUPLICATE_ROWS_2(DB_NAME VARCHAR, SCHEMA_NAME VARCHAR, TARGET_TABLES ARRAY, EVALUATE_PK BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_ACCOUNTINGSUMMARY_PAYMENTS_TOP(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_ACCOUNTINGSUMMARY_PAYMENTS_TOP(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_DAG_DATASHARE_CRAFTABLE_LOAD_TABLES(),"CREATE OR REPLACE PROCEDURE ""SP_DAG_DATASHARE_CRAFTABLE_LOAD_TABLES""()
+RETURNS VARCHAR
+LANGUAGE SQL
+EXECUTE AS OWNER
+AS '
+DECLARE
+    -- Runtime metadata
+    run_metadata VARIANT;
+    parent_query_id VARCHAR;
+    task_run_group_id VARCHAR;
+    attempt_number NUMBER;
+    session_id VARCHAR;
+    task_name VARCHAR;
+
+    -- Log variable
+    LOGS VARCHAR DEFAULT ''Execution Log:\\n''; --to debug, you can add variables to the log and then return it. for example: LOGS := LOGS || ''target_table_name: '' || COALESCE(:target_table_name, ''NULL'') || ''\\n'';
+
+    -- Constants (Screaming Snake Case)
+    LOOKBACK_DAYS INT DEFAULT 30;
+    DATE_FORMAT VARCHAR DEFAULT ''YYYY-MM-DD'';
+    CRAFTABLE_TABLES_TARGET_SCHEMA VARCHAR DEFAULT ''DATASHARE_DEV'';
+    
+    -- List of EXISTING Stored Procedures to call
+    TARGET_SPROC_LIST ARRAY DEFAULT ARRAY_CONSTRUCT (
+        ''DATAADMIN.SP_LOAD_DATASHARE_CRAFTABLE_CHECK''
+        ,''DATAADMIN.SP_LOAD_DATASHARE_CRAFTABLE_GRATUITY''
+        ,''DATAADMIN.SP_LOAD_DATASHARE_CRAFTABLE_DISCOUNT''
+        ,''DATAADMIN.SP_LOAD_DATASHARE_CRAFTABLE_FEE'',
+        ''DATAADMIN.SP_LOAD_DATASHARE_CRAFTABLE_ITEM'',
+        ''DATAADMIN.SP_LOAD_DATASHARE_CRAFTABLE_LABOR'',
+        ''DATAADMIN.SP_LOAD_DATASHARE_CRAFTABLE_MODIFIER'',
+        ''DATAADMIN.SP_LOAD_DATASHARE_CRAFTABLE_PAYMENT'',
+        ''DATAADMIN.SP_LOAD_DATASHARE_CRAFTABLE_VOID''
+    );
+    
+    -- Variables needed for the SP call arguments
+    -- SIGNED_UP_LOCATIONS VARCHAR DEFAULT ''4,25,26,27,28,32'';
+    SIGNED_UP_LOCATIONS VARCHAR DEFAULT ''4,32'';
+    
+    -- Date Variables (DATE type)
+    yesterday_date DATE;             -- The end date for the load (DATE type).
+    retention_boundary_date DATE;    -- The date 30 days before yesterday (DATE type).
+
+    -- String Variables (VARCHAR type - for passing to the SPROCs)
+    start_date_str VARCHAR;          -- The start date parameter as a string.
+    end_date_str VARCHAR;            -- The end date parameter as a string.
+
+    -- Variables for the loop and dynamic execution
+    sproc_name VARCHAR;
+    sql_command VARCHAR;
+    target_table_name VARCHAR;
+
+    -- Variables for Watermark Logic
+    target_table_max_date DATE;
+    calculated_start_date DATE;
+    res RESULTSET;
+    c1 CURSOR FOR SELECT NULL; -- Initialized with a dummy query
+    
+
+BEGIN
+    CALL dataadmin.sp_get_dag_run_metadata(COALESCE(last_query_id(), ''NOT_FOUND'')) INTO :run_metadata;
+    parent_query_id := :run_metadata:parent_query_id::VARCHAR;
+    task_run_group_id := :run_metadata:graph_run_group_id::VARCHAR;
+    attempt_number := :run_metadata:run_attempt_number::NUMBER;
+    session_id := :run_metadata:session_id::VARCHAR;
+    task_name := :run_metadata:task_name::VARCHAR;
+    
+    ----------------------------------------------------------
+    -- todo: get signed up locations. for the moment we are using `SIGNED_UP_LOCATIONS` and writting to a dev schema
+    ----------------------------------------------------------
+
+    -- Calculate Date Values (DATE Type)
+    yesterday_date := DATEADD(day, -1, CURRENT_DATE());
+    retention_boundary_date := DATEADD(day, -:LOOKBACK_DAYS, :yesterday_date);
+    -- Convert Dates to String Format (VARCHAR Type)
+    end_date_str := TO_VARCHAR(:yesterday_date, :DATE_FORMAT);
+    
+    -- Loop through each target stored procedure
+    FOR i IN 0 TO ARRAY_SIZE(TARGET_SPROC_LIST) - 1 DO
+        sproc_name := TARGET_SPROC_LIST[i];
+
+        BEGIN
+            -- Determine target table name from sproc name.
+            target_table_name := ''CRAFTABLE_'' || SPLIT_PART(:sproc_name, ''_'', -1);
+
+            -- =======================================================
+            -- START: WATERMARK CALCULATION LOGIC
+            -- =======================================================
+            
+            -- Step A: Run the Dynamic SQL and fetch the result into a variable
+            sql_command := ''SELECT MAX(""Business Day"") FROM '' || CRAFTABLE_TABLES_TARGET_SCHEMA || ''.'' || target_table_name;
+            LOGS := LOGS || ''Executing: '' || :sql_command || ''\\n'';
+            res := (EXECUTE IMMEDIATE :sql_command);
+            OPEN c1 FOR res;
+            FETCH c1 INTO target_table_max_date;
+            CLOSE c1;
+
+            -- Step B: Handle NULL (First Load)
+            IF (target_table_max_date IS NULL) THEN
+                target_table_max_date := ''1900-01-01''::DATE;
+            END IF;
+
+            -- Step C: Compare Max Date vs Retention Boundary
+            IF (target_table_max_date > retention_boundary_date) THEN
+                calculated_start_date := DATEADD(day, 1, target_table_max_date);
+            ELSE
+                calculated_start_date := retention_boundary_date;
+            END IF;
+
+            -- Step D: Convert to String for SPROC call
+            start_date_str := TO_VARCHAR(calculated_start_date, DATE_FORMAT);
+
+            -- =======================================================
+            -- END: WATERMARK CALCULATION LOGIC
+            -- =======================================================
+
+            -- Step 3: Call Load Procedure
+            -- We pass the string variables (start_date_str, end_date_str) to the SPROC.
+            sql_command := ''CALL '' || sproc_name || 
+                         ''(?, ?, ?)'';
+            LOGS := LOGS || ''Executing: '' || :sql_command || '' with ('' || :start_date_str || '', '' || :end_date_str || '', '' || :SIGNED_UP_LOCATIONS || '')\\n'';
+                        
+            EXECUTE IMMEDIATE :sql_command USING (start_date_str, end_date_str, SIGNED_UP_LOCATIONS);
+
+
+            -- Step 4: Data Retention Policy (DELETE)
+            -- Uses the dynamically extracted target_table_name.
+            sql_command := ''DELETE FROM '' || CRAFTABLE_TABLES_TARGET_SCHEMA || ''.'' || target_table_name || 
+                        '' WHERE ""Business Day"" <= ?'';
+            LOGS := LOGS || ''Executing: '' || :sql_command || '' with ('' || :retention_boundary_date || '')\\n'';
+                        
+            EXECUTE IMMEDIATE :sql_command USING (retention_boundary_date);
+            
+        EXCEPTION
+            WHEN OTHER THEN
+                INSERT INTO dataadmin.error_logs (
+                    parent_query_id,
+                    task_run_group_id,
+                    attempt_number,
+                    session_id,
+                    task_name,
+                    failed_query_id,
+                    error_type_id,
+                    severity,
+                    sql_error_code,
+                    sql_error_message,
+                    sql_state,
+                    details
+                )
+                SELECT
+                    :parent_query_id,
+                    :task_run_group_id,
+                    :attempt_number,
+                    :session_id,
+                    :task_name,
+                    COALESCE(last_query_id(), ''NOT_FOUND''), --it should return the query_id of the failed command in the BEGIN block.
+                    2, --1 are hard fails and 2 soft fails
+                    ''ERROR'',
+                    :SQLCODE,
+                    :SQLERRM,
+                    :SQLSTATE,
+                    OBJECT_CONSTRUCT(''LOGS'', :LOGS);
+        END;
+
+    END FOR;
+    
+    RETURN ''Graph Run Group ID: ''||:run_metadata:graph_run_group_id || '', Attempt: ''||:run_metadata:run_attempt_number ||    ''--- LOGS:'' || COALESCE(:LOGS, ''LOGS variable is NULL'');
+END;
+';"
+PROCEDURE,DATAADMIN,"SP_DATASHARE_CRAFTABLE_ITEM(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_DATASHARE_CRAFTABLE_ITEM(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_DQ_ACCELERATION_ELEGIBLE(),"CREATE OR REPLACE PROCEDURE ""SP_DQ_ACCELERATION_ELEGIBLE""()
+RETURNS VARIANT
+LANGUAGE SQL
+EXECUTE AS OWNER
+AS '
+DECLARE
+    -- Runtime metadata
+    run_metadata VARIANT;
+    parent_query_id VARCHAR;
+    task_run_group_id VARCHAR;
+    attempt_number NUMBER;
+    session_id VARCHAR;
+    task_name VARCHAR;
+
+    -- Procedure specific variables
+    select_query_id VARCHAR;
+    opportunities_result VARIANT;
+    row_count NUMBER;
+BEGIN
+    -- Get runtime metadata for logging and traceability
+    CALL dataadmin.sp_get_dag_run_metadata(COALESCE(last_query_id(), ''NOT_FOUND'')) INTO :run_metadata;
+    parent_query_id := :run_metadata:parent_query_id::VARCHAR;
+    task_run_group_id := :run_metadata:graph_run_group_id::VARCHAR;
+    attempt_number := :run_metadata:run_attempt_number::NUMBER;
+    session_id := :run_metadata:session_id::VARCHAR;
+    task_name := COALESCE(:run_metadata:task_name::VARCHAR, ''sp_dq_acceleration_elegible'');
+
+    -- The actual data quality check logic
+    -- Aggregate potential opportunities into a JSON array, preserving the order of importance.
+    SELECT ARRAY_AGG(OBJECT_CONSTRUCT(
+        ''query_id'', q.query_id,
+        ''eligible_query_acceleration_time'', q.eligible_query_acceleration_time,
+        ''query_text'', q.query_text,
+        ''query_type'', q.query_type,
+        ''user_name'', q.user_name,
+        ''role_name'', q.role_name,
+        ''query_tag'', q.query_tag,
+        ''start_time'', q.start_time,
+        ''end_time'', q.end_time,
+        ''user_type'', q.user_type
+    )) WITHIN GROUP (ORDER BY q.eligible_query_acceleration_time DESC)
+    INTO :opportunities_result
+    FROM (
+        SELECT
+            qae.query_id,
+            qae.eligible_query_acceleration_time,
+            qh.query_text,
+            qh.query_type,
+            qh.user_name,
+            qh.role_name,
+            qh.query_tag,
+            qh.start_time,
+            qh.end_time,
+            qh.user_type
+        FROM (
+            select query_id,eligible_query_acceleration_time  from SNOWFLAKE.ACCOUNT_USAGE.QUERY_ACCELERATION_ELIGIBLE WHERE
+            start_time > DATEADD(''day'', -7, CURRENT_TIMESTAMP())
+            ) qae
+        LEFT JOIN
+            (select * from SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY where start_time > DATEADD(''day'', -7, CURRENT_TIMESTAMP()) ) qh
+             ON qae.query_id = qh.query_id
+    ) q;
+
+    select_query_id := last_query_id();
+    row_count := ARRAY_SIZE(COALESCE(:opportunities_result, ARRAY_CONSTRUCT()));
+
+    IF (row_count > 0) THEN
+        -- If there are opportunities, log a single data quality issue.
+        INSERT INTO DATAADMIN.error_logs (
+            parent_query_id,
+            task_run_group_id,
+            attempt_number,
+            session_id,
+            task_name,
+            failed_query_id,
+            error_type_id,
+            severity,
+            sql_error_code,
+            sql_error_message,
+            sql_state,
+            details
+        )
+        SELECT
+            :parent_query_id,
+            :task_run_group_id,
+            :attempt_number,
+            :session_id,
+            :task_name,
+            :select_query_id,
+            3, -- 1=Hard Fail, 2=Soft Fail, 3=Data Quality
+            ''WARNING'',
+            NULL,
+            ''Data quality check failed: Query acceleration opportunities detected.'',
+            NULL,
+            OBJECT_CONSTRUCT(
+                ''check_name'', ''sp_dq_acceleration_elegible'',
+                ''eligible_query_count'', :row_count,
+                ''message'', ''Queries eligible for acceleration were found. See return value for details.''
+            );
+        RETURN :opportunities_result;
+    ELSE
+        RETURN OBJECT_CONSTRUCT(''status'', ''Data quality check passed. No acceleration opportunities found.'');
+    END IF;
+
+END;
+';"
+PROCEDURE,DATAADMIN,"SP_GETPERSPECTIVESCHEMA(SPROCNAME VARCHAR, STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID NUMBER)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_GETPERSPECTIVESCHEMA(SPROCNAME VARCHAR, STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID NUMBER)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_LOAD_AVERO_CHECKDETAIL(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_LOAD_AVERO_CHECKDETAIL(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_REPORT_ACCOUNTSUMMARY_PAYMENTS_FEETAX(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_REPORT_ACCOUNTSUMMARY_PAYMENTS_FEETAX(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_REPORT_ACCOUNTSUMMARY_PAYMENTS_REFUNDS(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_REPORT_ACCOUNTSUMMARY_PAYMENTS_REFUNDS(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_STAGELOADACTIVITY_FACT(VALIDATE_DATE BOOLEAN),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_STAGELOADACTIVITY_FACT(VALIDATE_DATE BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_STAGELOADJOBPOSITION_DIM(VALIDATE_DATE BOOLEAN),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_STAGELOADJOBPOSITION_DIM(VALIDATE_DATE BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_LOAD_365_TENDERS(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_LOAD_365_TENDERS(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_LOAD_DATASHARE_CRAFTABLE_GRATUITY(START_DATE VARCHAR, END_DATE VARCHAR, LOCATION_IDS VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_LOAD_DATASHARE_CRAFTABLE_GRATUITY(START_DATE VARCHAR, END_DATE VARCHAR, LOCATION_IDS VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_LOAD_DATASHARE_CRAFTABLE_VOID(START_DATE VARCHAR, END_DATE VARCHAR, LOCATION_IDS VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_LOAD_DATASHARE_CRAFTABLE_VOID(START_DATE VARCHAR, END_DATE VARCHAR, LOCATION_IDS VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_REPORT_ACCOUNTSUMMARY_PAYMENTS_LABOR(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_REPORT_ACCOUNTSUMMARY_PAYMENTS_LABOR(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_REPORT_DISCOUNT_0001(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_REPORT_DISCOUNT_0001(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_REPORT_VOID_0001(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_REPORT_VOID_0001(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_STAGELOADCASHBANKEVENT_FACT(VALIDATE_DATE BOOLEAN),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_STAGELOADCASHBANKEVENT_FACT(VALIDATE_DATE BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_STAGELOADGIFTCARD_DIM(VALIDATE_DATE BOOLEAN),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_STAGELOADGIFTCARD_DIM(VALIDATE_DATE BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_STAGELOADLOCATION_DIM(VALIDATE_DATE BOOLEAN),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_STAGELOADLOCATION_DIM(VALIDATE_DATE BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_STAGELOADORGANIZATION_DIM(VALIDATE_DATE BOOLEAN),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_STAGELOADORGANIZATION_DIM(VALIDATE_DATE BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_GETPERSPECTIVESCHEMA(SPROCNAME VARCHAR, STARTDATE TIMESTAMP_TZ)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_GETPERSPECTIVESCHEMA(SPROCNAME VARCHAR, STARTDATE TIMESTAMP_TZ)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_REPORT_DISCOUNT_SUMMARY(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_REPORT_DISCOUNT_SUMMARY(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_REPORT_TEST(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_REPORT_TEST(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_REPORT_TESTQ(),"CREATE OR REPLACE PROCEDURE ""SP_REPORT_TESTQ""()
+RETURNS TABLE ()
+LANGUAGE SQL
+EXECUTE AS OWNER
+AS '
+-- -- ====================================================================================================================
+--Example Call Statement
+--CALL DATAADMIN.SP_REPORT_PMIX(''2000-11-20T14:48:37.661Z'',''2023-11-20T14:48:37.661Z'',''[351,352]'');
+-- ====================================================================================================================
+DECLARE 
+  reportSet resultset;
+  -- startdate timestamp_tz := ''2000-11-20T14:48:37.661Z'';  
+  -- enddate timestamp_tz   := ''2023-11-20T14:48:37.661Z''; 
+  -- locationid string      := ''[351,352]'';
+  locationidS string     :=  REPLACE(REPLACE(:locationid,''['',''''),'']'','''');
+-- -- ====================================================================================================================
+-- --NOTE:  Convert to local timezone.
+-- --NOTE:  Split checks - report quantity - what about an item that was split, but one split check was 
+-- --       removed?  In that case, we would have 3/4 of an item see sql.
+-- --==========================================================================================
+BEGIN
+
+reportSet := (
+ SELECT 1 as count
+    
+--------------------------------------------------------------------------------------------   
+FROM DATAADMIN.ITEM_FACT                                    itf
+     
+--==========================================================================================
+);
+RETURN TABLE(reportSet); 
+END;
+';"
+PROCEDURE,DATAADMIN,SP_STAGELOADCHECKCASHPAYMENTLEDGER_FACT(VALIDATE_DATE BOOLEAN),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_STAGELOADCHECKCASHPAYMENTLEDGER_FACT(VALIDATE_DATE BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_STAGELOADEMPLOYMENTPERIOD_DIM(VALIDATE_DATE BOOLEAN),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_STAGELOADEMPLOYMENTPERIOD_DIM(VALIDATE_DATE BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_STAGELOADERRORDWDATE_DIM(VALIDATE_DATE BOOLEAN),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_STAGELOADERRORDWDATE_DIM(VALIDATE_DATE BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_WRITESQLALLTABLES(DBNAME VARCHAR, SCHEMANAME VARCHAR, SQLNAME VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_WRITESQLALLTABLES(DBNAME VARCHAR, SCHEMANAME VARCHAR, SQLNAME VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_STAGELOADDISCOUNTITEM_FACT(VALIDATE_DATE BOOLEAN),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_STAGELOADDISCOUNTITEM_FACT(VALIDATE_DATE BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_CREATEDWTABLELOAD(DBNAME VARCHAR, SCHEMANAME VARCHAR, TABLENAME VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_CREATEDWTABLELOAD(DBNAME VARCHAR, SCHEMANAME VARCHAR, TABLENAME VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_CREATEDWTABLELOAD_CREATEALL(),"CREATE OR REPLACE PROCEDURE ""SP_CREATEDWTABLELOAD_CREATEALL""()
+RETURNS TABLE ()
+LANGUAGE SQL
+EXECUTE AS OWNER
+AS 'DECLARE 
+    SQLStmt resultset;
+    ScriptIns varchar;
+    SQLTextOut varchar;
+    SQLIns varchar;
+    SCRIPT resultset;
+    BIGSCRIPTS resultset;
+
+-----------------------------------------------------------------------------------------------------------
+BEGIN
+   --drop temp tables if they exist
+   drop table if exists dwtable_lists; 
+   drop table if exists dwtable_scripts; 
+
+   create table dwtable_scripts (
+     name varchar (100) 
+     ,scripttext varchar
+  );
+
+   --create a table containing rows with the call statements to create the load stored procedures
+   SELECT 
+     REPLACE(''CALL DATAADMIN.SP_CreateDWTableLoad(\\''DEV_HOSPENG_REPORTING\\'',\\''DATASTAGE\\'',\\''<TABLENAME>\\'')''
+       ,''<TABLENAME>'',TABLE_NAME) AS sqltext
+     FROM information_schema.tables t
+   WHERE TABLE_SCHEMA = ''DATAWAREHOUSE''
+     AND TABLE_TYPE = ''BASE TABLE''
+     AND TABLE_NAME not in  (''ORDER_SUMMARY'',''ITEM_SALES'',''ERRORDATE_DIM'',''DATE_DIM'')
+     AND TABLE_NAME NOT ILIKE (''DW_%'')
+     AND TABLE_NAME  ILIKE ANY (''%_FACT'',''%_DIM'',''%_XREF'',''%_SUMMARY'');
+   
+   CREATE TABLE dwtable_lists AS
+     SELECT * FROM TABLE(RESULT_SCAN(LAST_QUERY_ID()));
+
+  SQLStmt := (select * from dwtable_lists);
+
+  --loop through all rows that create the load stored proceedure 1 per table
+      BEGIN
+          FOR record IN SQLStmt DO
+            SQLTextOut := record.sqltext;
+            SCRIPT := (EXECUTE IMMEDIATE record.sqltext);           
+            ScriptIns := (SELECT * FROM TABLE(RESULT_SCAN(LAST_QUERY_ID())));
+            INSERT INTO dwtable_scripts(scripttext)    
+                VALUES(:ScriptIns);   --works       
+          END FOR;
+     END;
+
+  BIGSCRIPTS := (SELECT listagg(scripttext) from dwtable_scripts);   
+  RETURN TABLE(BIGSCRIPTS);
+  
+END';"
+PROCEDURE,DATAADMIN,"SP_DATASHARE_CRAFTABLE_MODIFIER(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_DATASHARE_CRAFTABLE_MODIFIER(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_DEPENDENCIES(),"CREATE OR REPLACE PROCEDURE ""SP_DEPENDENCIES""()
+RETURNS TABLE ()
+LANGUAGE SQL
+EXECUTE AS OWNER
+AS '
+--Procedure to pull the dependent tables of all the views in public ending with _DIM/_FACT/_XREF
+declare
+--Declaring variables
+  select_statement varchar;
+  res resultset;
+begin
+--Sql statement to pull the dependent tables of all the views in public ending with _DIM/_FACT/_XREF
+select_statement := (SELECT listagg(stmt, '''') as statment_text FROM (SELECT
+     ''SELECT * from table(get_object_references(database_name=>\\''DEV_HOSPENG_REPORTING\\'', schema_name=>\\''DATAADMIN\\'', object_name=> \\'''' || table_name || ''\\''))''
+      || CASE WHEN row_num < max(row_num) over()
+            THEN '' UNION ''
+        ELSE '' ''
+      END as stmt
+      FROM (SELECT TABLE_NAME
+            ,rank() over (ORDER BY table_name) as row_num
+            FROM INFORMATION_SCHEMA.TABLES
+            WHERE TABLE_SCHEMA = ''DATAADMIN'' and
+                  (TABLE_NAME like ''%_DIM'' or
+                  TABLE_NAME like ''%_FACT'' or
+                  TABLE_NAME like ''%_XREF''))));
+--Executing the variable which is the sql statement
+res := (execute immediate : select_statement);
+--Returning the variable which is the result of sql statement
+return table(res);
+end;
+';"
+PROCEDURE,DATAADMIN,SP_LOADALLDWTABLES(),"CREATE OR REPLACE PROCEDURE ""SP_LOADALLDWTABLES""()
+RETURNS VARCHAR(16777216)
+LANGUAGE SQL
+EXECUTE AS OWNER
+AS 'DECLARE
+----------------------------------------------------------------------------------------------------------------------
+  SQLText VARCHAR(75)            := ''CALL DATAADMIN.<SPROCNAME>();'';
+  IsTableName                    BOOLEAN;
+  res_list RESULTSET;
+
+----------------------------------------------------------------------------------------------------------------------
+BEGIN
+----------------------------------------------------------------------------------------------------------------------
+--put list of proceedures in a temp table
+SHOW PROCEDURES 
+  LIKE ''SP_STAGELOAD%''
+    IN SCHEMA DATAADMIN; 
+
+--read all of the load proceedures that eist into a result set
+res_list := (SELECT REPLACE(:SQLText,''<SPROCNAME>'',""name"") AS ExecStmt
+FROM TABLE(RESULT_SCAN(LAST_QUERY_ID())));
+
+-- res_list := (SELECT * from proc_list_temp plt );
+DECLARE cur1 CURSOR FOR res_list;
+  BEGIN
+    FOR row_variable IN cur1 DO
+      EXECUTE IMMEDIATE row_variable.ExecStmt;
+    END FOR;
+  END;
+
+-- ---------------------------------------------------------------------------------------------------------------------- 
+--RETURN condition message
+RETURN (''INFORMATIONAL MESSAGE:  Load Complete'');
+
+--========================================================================================================================
+END';"
+PROCEDURE,DATAADMIN,"SP_LOAD_365_EMPLOYEES(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_LOAD_365_EMPLOYEES(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_LOAD_AVERO_CHECKTRANSFER(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_LOAD_AVERO_CHECKTRANSFER(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_STAGELOADOVERTIMELABORRULE_JOBPOSITION_XREF(VALIDATE_DATE BOOLEAN),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_STAGELOADOVERTIMELABORRULE_JOBPOSITION_XREF(VALIDATE_DATE BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_DATASHARE_CRAFTABLE_CREATE_LOAD_SPROC(SOURCE_SPROC_NAME VARCHAR, TARGET_TABLE_NAME VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_DATASHARE_CRAFTABLE_CREATE_LOAD_SPROC(SOURCE_SPROC_NAME VARCHAR, TARGET_TABLE_NAME VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_LOAD_365_TAXDETAILS(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_LOAD_365_TAXDETAILS(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_LOAD_AVERO_MENUITEMDETAIL(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_LOAD_AVERO_MENUITEMDETAIL(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_REPORT_TAX_NEW(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_REPORT_TAX_NEW(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_STAGELOADCHEQUE_FACT(VALIDATE_DATE BOOLEAN),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_STAGELOADCHEQUE_FACT(VALIDATE_DATE BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_STAGELOADREFUNDS_FACT(VALIDATE_DATE BOOLEAN),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_STAGELOADREFUNDS_FACT(VALIDATE_DATE BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_SUGGESTVARIANTDATATYPES(DBNAME VARCHAR, SCHEMANAME VARCHAR, TABLENAME VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_SUGGESTVARIANTDATATYPES(DBNAME VARCHAR, SCHEMANAME VARCHAR, TABLENAME VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_DATAWAREHOUSE_MANAPP_SHIFT(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_DATAWAREHOUSE_MANAPP_SHIFT(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_REPORT_DISCOUNT(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_REPORT_DISCOUNT(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_REPORT_GIFTCARDLIABILITY(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_REPORT_GIFTCARDLIABILITY(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_REPORT_MODIFIER(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_REPORT_MODIFIER(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_STAGELOADFEETAX_FACT(VALIDATE_DATE BOOLEAN),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_STAGELOADFEETAX_FACT(VALIDATE_DATE BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_STAGELOADTAXASSOCIATION_MENUITEM_XREF(VALIDATE_DATE BOOLEAN),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_STAGELOADTAXASSOCIATION_MENUITEM_XREF(VALIDATE_DATE BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_STAGELOADJOBCATEGORY_DIM(VALIDATE_DATE BOOLEAN),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_STAGELOADJOBCATEGORY_DIM(VALIDATE_DATE BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_STAGELOADITEM_FACT(VALIDATE_DATE BOOLEAN),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_STAGELOADITEM_FACT(VALIDATE_DATE BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"GET_TOP_10_DUPLICATE_ROWS_DELETE(DB_NAME VARCHAR, SCHEMA_NAME VARCHAR, TARGET_TABLES ARRAY, EVALUATE_PK BOOLEAN, PERFORM_DELETE BOOLEAN)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.GET_TOP_10_DUPLICATE_ROWS_DELETE(DB_NAME VARCHAR, SCHEMA_NAME VARCHAR, TARGET_TABLES ARRAY, EVALUATE_PK BOOLEAN, PERFORM_DELETE BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"GET_TOP_10_DUPLICATE_ROWS_TEST(DB_NAME VARCHAR, SCHEMA_NAME VARCHAR, TARGET_TABLES ARRAY, EVALUATE_PK BOOLEAN)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.GET_TOP_10_DUPLICATE_ROWS_TEST(DB_NAME VARCHAR, SCHEMA_NAME VARCHAR, TARGET_TABLES ARRAY, EVALUATE_PK BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_CHECKFORFOREIGNKEY_ALL(REPORTTYPE VARCHAR),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_CHECKFORFOREIGNKEY_ALL(REPORTTYPE VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_CHECKVARIANTDATATYPES_ALL(REPORTTYPE VARCHAR, TABLENAME VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_CHECKVARIANTDATATYPES_ALL(REPORTTYPE VARCHAR, TABLENAME VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_COPY_AVEROFILES_FROM_S3_TO_SFTP(DATE_NAME VARCHAR, LOCATION_ID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_COPY_AVEROFILES_FROM_S3_TO_SFTP(DATE_NAME VARCHAR, LOCATION_ID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_CREATEDWTABLE(DBNAME VARCHAR, SCHEMANAME VARCHAR, TABLENAME VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_CREATEDWTABLE(DBNAME VARCHAR, SCHEMANAME VARCHAR, TABLENAME VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_LOAD_365_TAXDEFINITIONS(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_LOAD_365_TAXDEFINITIONS(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_COPY_AVEROFILES_FROM_S3_TO_SFTP(DATE_NAME VARCHAR, LOCATION_ID VARCHAR, AVERO_LOC_ID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_COPY_AVEROFILES_FROM_S3_TO_SFTP(DATE_NAME VARCHAR, LOCATION_ID VARCHAR, AVERO_LOC_ID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_GET_YESTERDAY_DATES(),"CREATE OR REPLACE PROCEDURE ""SP_GET_YESTERDAY_DATES""()
+RETURNS VARIANT
+LANGUAGE SQL
+EXECUTE AS OWNER
+AS '
+/*
+ * Stored Procedure: SP_GET_YESTERDAY_DATES
+ *
+ * Description:
+ * This procedure calculates and retrieves yesterday''s date in two common string formats.
+ * It''s designed as a reusable utility to provide consistent date values for other
+ * stored procedures or queries that rely on the previous day''s date.
+ *
+ * Returns:
+ * A VARIANT (JSON object) containing two key-value pairs:
+ * - ""dateName"": VARCHAR - Yesterday''s date in ''YYYY-MM-DD'' format.
+ * - ""dateText"": VARCHAR - Yesterday''s date in ''YYYYMMDD'' format.
+ *
+ * Example Return Value:
+ * {
+ * ""dateName"": ""2025-09-01"",
+ * ""dateText"": ""20250901""
+ * }
+ *
+ * Usage:
+ * CALL SP_GET_YESTERDAY_DATES();
+ *
+ */
+DECLARE
+    -- Declare variables to hold the calculated date values
+    date_name_val VARCHAR;
+    date_text_val VARCHAR;
+    return_object VARIANT;
+BEGIN
+    -- Execute the query and store the results into the variables
+    SELECT
+        TO_CHAR(DATEADD(day, -1, CURRENT_DATE()), ''YYYY-MM-DD''),
+        REPLACE(TO_CHAR(DATEADD(day, -1, CURRENT_DATE()), ''YYYY-MM-DD''), ''-'', '''')
+    INTO
+        :date_name_val,
+        :date_text_val;
+
+    -- Construct a JSON object to return both values
+    SELECT OBJECT_CONSTRUCT(''dateName'', :date_name_val, ''dateText'', :date_text_val)
+    INTO :return_object;
+
+    RETURN return_object;
+END;
+';"
+PROCEDURE,DATAADMIN,"SP_REPORTDATAGROOM(REPORT VARCHAR, DAYS NUMBER, LOCATIONID NUMBER)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_REPORTDATAGROOM(REPORT VARCHAR, DAYS NUMBER, LOCATIONID NUMBER)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_REPORT_FEES(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_REPORT_FEES(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_REPORT_GIFTCARDDETAIL(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_REPORT_GIFTCARDDETAIL(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_STAGELOADBATCH_DIM(VALIDATE_DATE BOOLEAN),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_STAGELOADBATCH_DIM(VALIDATE_DATE BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_STAGELOADCASHPAYMENTLEDGER_FACT(VALIDATE_DATE BOOLEAN),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_STAGELOADCASHPAYMENTLEDGER_FACT(VALIDATE_DATE BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_STAGELOADCLOSEOUTSUMMARY_FACT(VALIDATE_DATE BOOLEAN),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_STAGELOADCLOSEOUTSUMMARY_FACT(VALIDATE_DATE BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_REPORT_ACCOUNTSUMMARY_PAYMENTS_BACK(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_REPORT_ACCOUNTSUMMARY_PAYMENTS_BACK(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_REPORT_PMIX(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_REPORT_PMIX(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_SEND_SOFT_FAILS_OVER_SLACK(CHANNEL VARCHAR, ERROR_TYPES ARRAY)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_SEND_SOFT_FAILS_OVER_SLACK(CHANNEL VARCHAR, ERROR_TYPES ARRAY)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_STAGELOADDISCOUNTCHECK_FACT(VALIDATE_DATE BOOLEAN),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_STAGELOADDISCOUNTCHECK_FACT(VALIDATE_DATE BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_STAGELOADLOCATION_LOCATIONGROUP_XREF(VALIDATE_DATE BOOLEAN),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_STAGELOADLOCATION_LOCATIONGROUP_XREF(VALIDATE_DATE BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_STAGELOADMODIFIER_DIM(VALIDATE_DATE BOOLEAN),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_STAGELOADMODIFIER_DIM(VALIDATE_DATE BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_STAGELOADPAYMENTS_FACT(VALIDATE_DATE BOOLEAN),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_STAGELOADPAYMENTS_FACT(VALIDATE_DATE BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_STAGELOADREFUNDSCHEQUEBYITEM_FACT(VALIDATE_DATE BOOLEAN),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_STAGELOADREFUNDSCHEQUEBYITEM_FACT(VALIDATE_DATE BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_STAGELOADSURCHARGECHEQUEBYITEM_FACT(VALIDATE_DATE BOOLEAN),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_STAGELOADSURCHARGECHEQUEBYITEM_FACT(VALIDATE_DATE BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,CALC_PHASH(FILE_PATH VARCHAR),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.CALC_PHASH(FILE_PATH VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"GET_TOP_10_DUPLICATE_ROWS(DB_NAME VARCHAR, SCHEMA_NAME VARCHAR, TARGET_TABLES ARRAY, EVALUATE_PK BOOLEAN)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.GET_TOP_10_DUPLICATE_ROWS(DB_NAME VARCHAR, SCHEMA_NAME VARCHAR, TARGET_TABLES ARRAY, EVALUATE_PK BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,OUTPUT_MESSAGE(MESSAGE VARCHAR),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.OUTPUT_MESSAGE(MESSAGE VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_DAG_SFTPJOBS(),"CREATE OR REPLACE PROCEDURE ""SP_DAG_SFTPJOBS""()
+RETURNS VARCHAR
+LANGUAGE SQL
+EXECUTE AS OWNER
+AS '
+DECLARE
+     -- Runtime metadata
+    run_metadata VARIANT;
+    parent_query_id VARCHAR;
+    task_run_group_id VARCHAR;
+    attempt_number NUMBER;
+    session_id VARCHAR;
+    task_name VARCHAR;
+    --actual variables for pipeline
+    dateName VARCHAR;
+    yesterday_dates VARIANT;
+
+    loc_id VARCHAR;
+    avero_loc_id VARCHAR;
+BEGIN
+    CALL dataadmin.sp_get_dag_run_metadata(COALESCE(last_query_id(), ''NOT_FOUND'')) INTO :run_metadata;
+    parent_query_id := :run_metadata:parent_query_id::VARCHAR;
+    task_run_group_id := :run_metadata:graph_run_group_id::VARCHAR;
+    attempt_number := :run_metadata:run_attempt_number::NUMBER;
+    session_id := :run_metadata:session_id::VARCHAR;
+    task_name := :run_metadata:task_name::VARCHAR;
+
+    --TODO add query tags in future sprints
+
+    CALL SP_GET_YESTERDAY_DATES() INTO :yesterday_dates;
+    dateName := :yesterday_dates:dateName;
+
+    CALL SP_LOAD_AVERO_GETLOCATIONS();
+    LET locations_cursor CURSOR FOR SELECT locationId, averoLocationId FROM TABLE(RESULT_SCAN(LAST_QUERY_ID()));
+
+    -- Loop through the cursor, row by row.
+    FOR location_row IN locations_cursor DO
+        -- Access the columns from the cursor using the row variable
+        loc_id := location_row.locationId::VARCHAR ;
+        avero_loc_id := location_row.averoLocationId::VARCHAR ;
+
+        BEGIN
+            -- execute worker procedures as soft fails.
+            CALL dataadmin.SP_LOAD_AVERO_EXTRACTALLFILES(:dateName,:loc_id);
+            CALL dataadmin.SP_COPY_AVEROFILES_FROM_S3_TO_SFTP(:dateName,:loc_id, :avero_loc_id);
+        EXCEPTION
+            -- If the worker fails, log the error here and continue the loop.
+            WHEN OTHER THEN
+                INSERT INTO dataadmin.error_logs (
+                    parent_query_id,
+                    task_run_group_id,
+                    attempt_number,
+                    session_id,
+                    task_name,
+                    failed_query_id,
+                    error_type_id,
+                    severity,
+                    sql_error_code,
+                    sql_error_message,
+                    sql_state,
+                    details
+                )
+                VALUES (
+                    :parent_query_id,
+                    :task_run_group_id,
+                    :attempt_number,
+                    :session_id,
+                    :task_name,
+                    COALESCE(last_query_id(), ''NOT_FOUND''), --it should return the query_id of the failed command in the BEGIN block.
+                    2, --1 are hard fails and 2 soft fails
+                    ''ERROR'',
+                    :SQLCODE,
+                    :SQLERRM,
+                    :SQLSTATE,
+                    null
+                );
+        END;
+    END FOR;
+
+RETURN ''Graph Run Group ID: ''||:run_metadata:graph_run_group_id || '', Attempt: ''||:run_metadata:run_attempt_number;
+END;
+';"
+PROCEDURE,DATAADMIN,"SP_DATASHARE_CRAFTABLE_FEES(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_DATASHARE_CRAFTABLE_FEES(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_DATAWAREHOUSE_MANAPP_CHECK(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_DATAWAREHOUSE_MANAPP_CHECK(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_LOAD_365_MENUITEMS(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_LOAD_365_MENUITEMS(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_LOAD_AVERO_EXTRACTONEFILE(FISCALDATE VARCHAR, LOCATIONID VARCHAR, FILE VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_LOAD_AVERO_EXTRACTONEFILE(FISCALDATE VARCHAR, LOCATIONID VARCHAR, FILE VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_LOAD_DATASHARE_CRAFTABLE_MODIFIER(START_DATE VARCHAR, END_DATE VARCHAR, LOCATION_IDS VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_LOAD_DATASHARE_CRAFTABLE_MODIFIER(START_DATE VARCHAR, END_DATE VARCHAR, LOCATION_IDS VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_STREAM_DASHBOARD_CHECK(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_STREAM_DASHBOARD_CHECK(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_DATASHARE_CRAFTABLE_CHECK(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_DATASHARE_CRAFTABLE_CHECK(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_LOAD_AVERO_DAYPART(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_LOAD_AVERO_DAYPART(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_REPORT_ACCOUNTSUMMARY_SALES(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_REPORT_ACCOUNTSUMMARY_SALES(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_REPORT_SUMMARY(DAY DATE),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_REPORT_SUMMARY(DAY DATE)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_REPORT_SUMMARY_NETSALES(DAY DATE),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_REPORT_SUMMARY_NETSALES(DAY DATE)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_STAGELOADDAYPART_DIM(VALIDATE_DATE BOOLEAN),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_STAGELOADDAYPART_DIM(VALIDATE_DATE BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_STAGELOADDISCOUNTREASON_DIM(VALIDATE_DATE BOOLEAN),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_STAGELOADDISCOUNTREASON_DIM(VALIDATE_DATE BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_STAGELOADTAX_FACT(VALIDATE_DATE BOOLEAN),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_STAGELOADTAX_FACT(VALIDATE_DATE BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_LOAD_AVERO_CHECKHEADER(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_LOAD_AVERO_CHECKHEADER(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_REPORT_ACCOUNTSUMMARY_PAYMENTS_FEES(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_REPORT_ACCOUNTSUMMARY_PAYMENTS_FEES(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_REPORT_BATCH(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_REPORT_BATCH(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_SEND_HARD_FAILS_OVER_SLACK(),"CREATE OR REPLACE PROCEDURE ""SP_SEND_HARD_FAILS_OVER_SLACK""()
+RETURNS VARCHAR
+LANGUAGE PYTHON
+RUNTIME_VERSION = '3.11'
+PACKAGES = ('snowflake-snowpark-python')
+HANDLER = 'send_hard_fail_alert'
+EXTERNAL_ACCESS_INTEGRATIONS = (SLACK_EXTERNAL_ACCESS_INTEGRATION)
+SECRETS = ('webhook_secret'=DATAADMIN.SLACK_WEBHOOK_PROD_DATAWAREHOUSE_ALERTS)
+EXECUTE AS CALLER
+AS '
+""""""
+-- Description:
+--   Monitors for and reports ""hard fails"" of Snowflake Tasks. A hard fail is a critical
+--   error that prevents a task from completing, such as a SQL compilation error, permission
+--   issue, or warehouse problem, resulting in a ''FAILED'' state.
+--
+--   The procedure operates statefully:
+--   1. It determines the last time it ran by checking for the most recent hard fail logged in
+--      the `dataadmin.error_logs` table, creating an efficient, overlapping time window.
+--   2. It queries `information_schema.task_history` to find any new task failures.
+--   3. It cross-references these failures against its own log to ensure alerts are not duplicated.
+--   4. New failures are formatted into a detailed critical alert and sent to a Slack channel.
+--   5. Only AFTER a successful Slack notification, it records the failures in the
+--      `dataadmin.error_logs` table to prevent re-alerting in the future.
+--
+--   This procedure is designed to be run on a simple schedule (e.g., every 15 minutes) by a
+--   master monitoring task to provide near real-time alerts on pipeline infrastructure failures.
+--
+-- Parameters:
+--   This procedure does not accept any parameters.
+--
+-- Returns:
+--   VARCHAR: A status message indicating the outcome of the operation.
+--     - ''No new hard fails to report.'' -> No new task failures were found.
+--     - ''Successfully reported and logged {failure_count} hard fail(s).'' -> On success.
+--     - A descriptive error message if the API call to Slack fails. The procedure will halt
+--       without logging the errors to ensure they are picked up on the next run.
+""""""
+import _snowflake
+import json
+import urllib.request
+from snowflake.snowpark.functions import col, lit, max as sp_max, coalesce, dateadd, current_timestamp, concat, call_function
+from collections import defaultdict
+
+def trim_message(message, max_len=800, front_len=200, back_len=300):
+    message = message.replace(''`'', ""''"")
+    if len(message) > max_len:
+        return message[:front_len] + ""... (trimmed) ..."" + message[-back_len:]
+    return message
+
+def send_hard_fail_alert(session):
+    # 1. Determine the start time for the search.
+    # This query finds the last hard fail''s timestamp, subtracts 1 hour as a safety margin,
+    # and defaults to a 24-hour lookback if no previous hard fails have been logged.
+    ts_query = """"""
+        SELECT DATEADD(''hour'', -1, COALESCE(
+            (SELECT MAX(event_timestamp) FROM dataadmin.error_logs WHERE error_type_id = 1),
+            DATEADD(''hour'', -24, CURRENT_TIMESTAMP())
+        ))
+    """"""
+    last_check_ts = session.sql(ts_query).collect()[0][0]
+
+    # 2. Query information_schema.task_history for new failed tasks.
+    task_history_df = session.sql(f""""""
+        SELECT
+            GRAPH_RUN_GROUP_ID,
+            ATTEMPT_NUMBER,
+            NAME,
+            STATE,
+            ERROR_CODE,
+            ERROR_MESSAGE,
+            QUERY_ID,
+            COMPLETED_TIME
+        FROM TABLE(information_schema.task_history(
+            SCHEDULED_TIME_RANGE_START => TO_TIMESTAMP_LTZ(''{last_check_ts}''),
+            ERROR_ONLY => TRUE
+        ))
+    """""")
+
+    # 3. Exclude records that have already been reported in error_logs.
+    # We create a unique run key to identify distinct task runs.
+    existing_logs_df = session.table(''dataadmin.error_logs'').filter(col(''ERROR_TYPE_ID'') == 1).select(
+        concat(col(''TASK_RUN_GROUP_ID''), lit(''|''), col(''ATTEMPT_NUMBER'')).alias(''RUN_KEY'')
+    )
+
+    new_failures_df = task_history_df.withColumn(
+        ''RUN_KEY'', concat(col(''GRAPH_RUN_GROUP_ID''), lit(''|''), col(''ATTEMPT_NUMBER''))
+    ).join(
+        existing_logs_df,
+        [''RUN_KEY''],
+        ''left_anti''
+    )
+
+    # Cache the result to materialize the list of new failures.
+    new_failures_df.cache_result()
+    
+    failures_to_report = new_failures_df.collect()
+    failure_count = len(failures_to_report)
+    if failure_count == 0:
+        return ''No new hard fails to report.''
+    
+    # This ID will be used to mark these errors as part of this notification batch.
+    get_graph_run_id_query = """"""
+    BEGIN
+        -- Attempt to get the real ID
+        RETURN SYSTEM$TASK_RUNTIME_INFO(''CURRENT_TASK_GRAPH_RUN_GROUP_ID'');
+    EXCEPTION
+        -- If any error occurs (like not being in a task), run this block instead
+        WHEN OTHER THEN
+            RETURN UUID_STRING();
+    END;
+    """"""
+    notification_query_id = session.sql(get_graph_run_id_query).collect()[0][0]
+
+    # 4. Build and send the Slack message.
+    grouped_failures = defaultdict(list)
+    for row in failures_to_report:
+        grouped_failures[row[''NAME'']].append(row)
+
+    blocks = [
+        {
+            ""type"": ""header"",
+            ""text"": {
+                ""type"": ""plain_text"",
+                ""text"": f"":x: Critical Alert: {failure_count} Snowflake Task Failure(s) Detected""
+            }
+        },
+        {""type"": ""divider""}
+    ]
+
+    for task_name, failures in grouped_failures.items():
+        task_error_count = len(failures)
+        
+        # Add a header for the task group
+        task_header_block = {
+            ""type"": ""section"",
+            ""text"": {
+                ""type"": ""mrkdwn"",
+                ""text"": f""*{task_name}:* {task_error_count} failure(s)""
+            }
+        }
+        blocks.append(task_header_block)
+
+        # Show up to 5 errors to avoid huge messages
+        for failure in failures[:5]:
+            error_message = trim_message(failure[''ERROR_MESSAGE''])
+            query_id = failure[''QUERY_ID'']
+            completed_time = failure[''COMPLETED_TIME''].strftime(''%Y-%m-%d %H:%M:%S %Z'')
+
+            # Each failure gets its own block to avoid the 3000 char limit
+            failure_block = {
+                ""type"": ""section"",
+                ""text"": {
+                    ""type"": ""mrkdwn"",
+                    ""text"": f""  • *Failed At:* {completed_time}\\n""
+                            f""    *Error:* `{error_message}`\\n""
+                            f""    *Query ID:* `{query_id}`""
+                }
+            }
+            blocks.append(failure_block)
+        
+        if len(failures) > 5:
+            more_failures_block = {
+                ""type"": ""context"",
+                ""elements"": [
+                    {
+                        ""type"": ""mrkdwn"",
+                        ""text"": f""...and {len(failures) - 5} more.""
+                    }
+                ]
+            }
+            blocks.append(more_failures_block)
+
+        blocks.append({""type"": ""divider""})
+
+    slack_payload = {""blocks"": blocks}
+    webhook_secret = _snowflake.get_generic_secret_string(''webhook_secret'')
+    webhook_url = f""https://hooks.slack.com/services/{webhook_secret}""
+    payload_json = json.dumps(slack_payload).encode(''utf-8'')
+    
+    req = urllib.request.Request(
+        webhook_url,
+        data=payload_json,
+        headers={''Content-Type'': ''application/json''}
+    )
+    
+    try:
+        with urllib.request.urlopen(req) as response:
+            if response.status != 200:
+                # Abort if Slack notification fails to avoid incorrectly logging the errors.
+                return f""Failed to send Slack message. Status: {response.status}, Body: {response.read().decode()}""
+    except Exception as e:
+        return f""Error sending Slack message: {e}""
+
+    # 5. After sending the alert, write the failure information to `dataadmin.error_logs`.
+    df_to_insert = new_failures_df.select(
+        call_function(""uuid_string"").alias(""ID""),
+        col(''COMPLETED_TIME'').alias(''EVENT_TIMESTAMP''),
+        col(''QUERY_ID'').alias(''PARENT_QUERY_ID''),
+        col(''GRAPH_RUN_GROUP_ID'').alias(''TASK_RUN_GROUP_ID''),
+        col(''ATTEMPT_NUMBER''),
+        lit(None).astype(''string'').alias(''SESSION_ID''), # Not available in task_history
+        col(''NAME'').alias(''TASK_NAME''),
+        col(''QUERY_ID'').alias(''FAILED_QUERY_ID''),
+        lit(1).alias(''ERROR_TYPE_ID''), # 1 = hard fail
+        lit(''CRITICAL'').alias(''SEVERITY''),
+        col(''ERROR_CODE'').alias(''SQL_ERROR_CODE''),
+        col(''ERROR_MESSAGE'').alias(''SQL_ERROR_MESSAGE''),
+        col(''STATE'').alias(''SQL_STATE''),
+        lit(None).astype(''variant'').alias(''DETAILS''),
+        lit(notification_query_id).alias(''ERROR_NOTIFICATION_ID''),
+        current_timestamp().alias(''ERROR_NOTIFICATION_TS'')
+    )
+
+    df_to_insert.write.mode(""append"").save_as_table(""dataadmin.error_logs"")
+
+    return f""Successfully reported and logged {failure_count} hard fail(s).""
+';"
+PROCEDURE,DATAADMIN,SP_STAGELOADDISCOUNTCHEQUEBYITEM_FACT(VALIDATE_DATE BOOLEAN),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_STAGELOADDISCOUNTCHEQUEBYITEM_FACT(VALIDATE_DATE BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_STAGELOADMENUITEM_MENUGROUP_XREF(VALIDATE_DATE BOOLEAN),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_STAGELOADMENUITEM_MENUGROUP_XREF(VALIDATE_DATE BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_UPDATEDWTABLE(SCHEMANAME VARCHAR, TABLENAME VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_UPDATEDWTABLE(SCHEMANAME VARCHAR, TABLENAME VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_VALIDATEDWDATES_CREATEALL(REPORTTYPE VARCHAR, ERRORREPORT VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_VALIDATEDWDATES_CREATEALL(REPORTTYPE VARCHAR, ERRORREPORT VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_CHECKVARIANTDATATYPES_ALL(REPORTTYPE VARCHAR),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_CHECKVARIANTDATATYPES_ALL(REPORTTYPE VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_DATAWAREHOUSECLONE(),"CREATE OR REPLACE PROCEDURE ""SP_DATAWAREHOUSECLONE""()
+RETURNS TABLE ()
+LANGUAGE SQL
+EXECUTE AS OWNER
+AS 'DECLARE 
+    SQLTEXT resultset:=(CREATE OR REPLACE SCHEMA DATAWAREHOUSE_TEMP CLONE DATAWAREHOUSE);
+BEGIN
+   RETURN TABLE(SQLTEXT);
+END';"
+PROCEDURE,DATAADMIN,SP_DATAWAREHOUSERENAME(),"CREATE OR REPLACE PROCEDURE ""SP_DATAWAREHOUSERENAME""()
+RETURNS TABLE ()
+LANGUAGE SQL
+EXECUTE AS OWNER
+AS 'DECLARE 
+    SQLTEXT1 resultset:= (DROP SCHEMA IF EXISTS DATAWAREHOUSE_HOLD);
+    SQLTEXT2 resultset:= (ALTER SCHEMA DATAWAREHOUSE RENAME TO DATAWAREHOUSE_HOLD);
+    SQLTEXT3 resultset:= (ALTER SCHEMA DATAWAREHOUSE_TEMP RENAME TO DATAWAREHOUSE);
+BEGIN
+   RETURN TABLE(SQLTEXT1);
+   RETURN TABLE(SQLTEXT2);
+   RETURN TABLE(SQLTEXT3);
+END';"
+PROCEDURE,DATAADMIN,SP_DQ_IS_YESTERDAY_LOADED_IN_CSF(),"CREATE OR REPLACE PROCEDURE ""SP_DQ_IS_YESTERDAY_LOADED_IN_CSF""()
+RETURNS VARCHAR
+LANGUAGE SQL
+EXECUTE AS OWNER
+AS '
+DECLARE
+    -- Runtime metadata
+    run_metadata VARIANT;
+    parent_query_id VARCHAR;
+    task_run_group_id VARCHAR;
+    attempt_number NUMBER;
+    session_id VARCHAR;
+    task_name VARCHAR;
+
+    -- Procedure specific variables
+    max_fiscal_date DATE;
+    yesterday_date DATE;
+    select_query_id VARCHAR;
+BEGIN
+    -- Get runtime metadata for logging and traceability
+    -- This part is boilerplate from our orchestration framework
+    CALL dataadmin.sp_get_dag_run_metadata(COALESCE(last_query_id(), ''NOT_FOUND'')) INTO :run_metadata;
+    parent_query_id := :run_metadata:parent_query_id::VARCHAR;
+    task_run_group_id := :run_metadata:graph_run_group_id::VARCHAR;
+    attempt_number := :run_metadata:run_attempt_number::NUMBER;
+    session_id := :run_metadata:session_id::VARCHAR;
+    task_name := COALESCE(:run_metadata:task_name::VARCHAR, ''sp_dq_is_yesterday_loaded_in_csf''); -- Task name might be null on manual run
+
+    -- The actual data quality check logic
+    yesterday_date := DATEADD(day, -1, CURRENT_DATE());
+
+    SELECT max(fiscal_date) INTO :max_fiscal_date
+    FROM DATAWAREHOUSE.CLOSEOUTSUMMARY_FACT
+    WHERE dw_iscurrentrow;
+
+    select_query_id := last_query_id();
+
+    IF (:max_fiscal_date IS NULL OR :max_fiscal_date <> :yesterday_date) THEN
+        -- If the max date is null (empty table) or less than yesterday, log a data quality issue.
+        INSERT INTO DATAADMIN.error_logs (
+            parent_query_id,
+            task_run_group_id,
+            attempt_number,
+            session_id,
+            task_name,
+            failed_query_id,
+            error_type_id,
+            severity,
+            sql_error_code,
+            sql_error_message,
+            sql_state,
+            details
+        )
+        SELECT
+            :parent_query_id,
+            :task_run_group_id,
+            :attempt_number,
+            :session_id,
+            :task_name,
+            :select_query_id,
+            3, -- 1=Hard Fail, 2=Soft Fail, 3=Data Quality
+            ''WARNING'',
+            NULL, -- No SQL error code for DQ check
+            ''Data quality check failed: CLOSEOUTSUMMARY_FACT is not updated with yesterday data.'',
+            NULL, -- No SQL state for DQ check
+            OBJECT_CONSTRUCT(
+                ''check_name'', ''sp_dq_is_yesterday_loaded_in_csf'',
+                ''yesterday_date'', :yesterday_date,
+                ''max_fiscal_date_in_table'', :max_fiscal_date
+            );
+        RETURN ''Data quality check failed. CLOSEOUTSUMMARY_FACT max(fiscal_date) is '' || COALESCE(TO_VARCHAR(:max_fiscal_date), ''NULL'') || '', expected at least '' || :yesterday_date;
+    ELSE
+        RETURN ''Data quality check passed.'';
+    END IF;
+
+END;
+';"
+PROCEDURE,DATAADMIN,SP_GETPERSPECTIVESCHEMA(SPROCNAME VARCHAR),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_GETPERSPECTIVESCHEMA(SPROCNAME VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_GET_ENVVARS(SECRET_NAMES ARRAY),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_GET_ENVVARS(SECRET_NAMES ARRAY)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_STAGELOADCONFIG_DIM(VALIDATE_DATE BOOLEAN),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_STAGELOADCONFIG_DIM(VALIDATE_DATE BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_DATASHARE_CRAFTABLE_LABOR(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_DATASHARE_CRAFTABLE_LABOR(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_DATAWAREHOUSE_DASHBOARD_CHECK(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_DATAWAREHOUSE_DASHBOARD_CHECK(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_LOAD_365_JOBS(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_LOAD_365_JOBS(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_LOAD_365_SURCHARGES(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_LOAD_365_SURCHARGES(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_LOAD_AVERO_GETLOCATIONS(),"CREATE OR REPLACE PROCEDURE ""SP_LOAD_AVERO_GETLOCATIONS""()
+RETURNS TABLE (""LOCATIONID"" NUMBER(38,0), ""AVEROLOCATIONID"" NUMBER(38,0))
+LANGUAGE SQL
+EXECUTE AS OWNER
+AS '
+DECLARE
+  res RESULTSET;
+BEGIN
+  res := (SELECT DISTINCT
+        f.VALUE:locationId::INT AS locationId,
+        f.VALUE:averoLocationId::INT AS averoLocationId
+    FROM
+        DATAWAREHOUSE.INTEGRATIONTYPE_DIM IND
+    INNER JOIN
+        DATAWAREHOUSE.CONFIG_DIM CFD
+        ON IND.INTEGRATIONTYPE_DIM_NK = CFD.INTEGRATIONTYPE_DIM_FK
+        AND CFD.DW_ISCURRENTROW
+        AND IND.DW_ISCURRENTROW
+        AND NOT IND.DW_ISDELETED
+        AND IND.INTEGRATIONTYPE = ''averoSFTP'',
+    LATERAL FLATTEN(input => PARSE_JSON(CFD.config):locations) f);
+  RETURN TABLE(res);
+END;
+';"
+PROCEDURE,DATAADMIN,"SP_LOAD_COMPEAT_MENUITEMS(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_LOAD_COMPEAT_MENUITEMS(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_LOAD_DATASHARE_CRAFTABLE_DISCOUNT(START_DATE VARCHAR, END_DATE VARCHAR, LOCATION_IDS VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_LOAD_DATASHARE_CRAFTABLE_DISCOUNT(START_DATE VARCHAR, END_DATE VARCHAR, LOCATION_IDS VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_LOAD_DATASHARE_ITEMS_DIANESESION(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_LOAD_DATASHARE_ITEMS_DIANESESION(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_LOAD_DATASHARE_ITEMS_REMOVE_LEFTJOIN(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_LOAD_DATASHARE_ITEMS_REMOVE_LEFTJOIN(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_REPORT_ACCOUNTSUMMARY_PAYMENTS_TAXDETAIL(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_REPORT_ACCOUNTSUMMARY_PAYMENTS_TAXDETAIL(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_REPORT_PAYINOUT(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_REPORT_PAYINOUT(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_REPORT_TAX(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_REPORT_TAX(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_STAGELOADGIFTCARDACTIVITY_FACT(VALIDATE_DATE BOOLEAN),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_STAGELOADGIFTCARDACTIVITY_FACT(VALIDATE_DATE BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_STAGELOADOVERTIMELABORRULE_DIM(VALIDATE_DATE BOOLEAN),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_STAGELOADOVERTIMELABORRULE_DIM(VALIDATE_DATE BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_STAGELOADPAYINPAYOUTREASON_DIM(VALIDATE_DATE BOOLEAN),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_STAGELOADPAYINPAYOUTREASON_DIM(VALIDATE_DATE BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_STREAM_DASHBOARD_SHIFT(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_STREAM_DASHBOARD_SHIFT(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_UPDATEDWTABLE(DBNAME VARCHAR, SCHEMANAME VARCHAR, TABLENAME VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_UPDATEDWTABLE(DBNAME VARCHAR, SCHEMANAME VARCHAR, TABLENAME VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_LOAD_AVERO_EXTRACTALLFILES(FISCALDATE VARCHAR, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_LOAD_AVERO_EXTRACTALLFILES(FISCALDATE VARCHAR, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_REPORT_TENDER(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_REPORT_TENDER(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_REPORT_VOID_0001_DEV(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_REPORT_VOID_0001_DEV(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_STAGELOADSTANDARDDISCOUNT_DIM(VALIDATE_DATE BOOLEAN),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_STAGELOADSTANDARDDISCOUNT_DIM(VALIDATE_DATE BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_STAGELOADTERMINAL_DIM(VALIDATE_DATE BOOLEAN),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_STAGELOADTERMINAL_DIM(VALIDATE_DATE BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_STAGELOADVOIDCHECKBYITEM_FACT(VALIDATE_DATE BOOLEAN),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_STAGELOADVOIDCHECKBYITEM_FACT(VALIDATE_DATE BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_STAGELOADVOIDREASON_DIM(VALIDATE_DATE BOOLEAN),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_STAGELOADVOIDREASON_DIM(VALIDATE_DATE BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_VALIDATEDWDATES(REPORTTYPE VARCHAR, TABLENAME VARCHAR, ERRORREPORT VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_VALIDATEDWDATES(REPORTTYPE VARCHAR, TABLENAME VARCHAR, ERRORREPORT VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,"SP_REPORT_PMIX_NEW(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_REPORT_PMIX_NEW(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAADMIN,SP_STAGELOADCOGSCATEGORY_DIM(VALIDATE_DATE BOOLEAN),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN.SP_STAGELOADCOGSCATEGORY_DIM(VALIDATE_DATE BOOLEAN)' does not exist or not authorized."
+PROCEDURE,DATAADMIN_DEBUG,"SP_REPORT_PMIX(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAADMIN_DEBUG.SP_REPORT_PMIX(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATASHARE_DEV,TEST_DELETE_THIS(),"CREATE OR REPLACE PROCEDURE ""TEST_DELETE_THIS""()
+RETURNS VARCHAR
+LANGUAGE SQL
+EXECUTE AS OWNER
+AS 'DECLARE
+    -- 1. Constants & Setup (Mimicking your SP)
+    LOOKBACK_DAYS INT DEFAULT 30;
+    DATE_FORMAT VARCHAR DEFAULT ''YYYY-MM-DD'';
+    
+    -- Date Variables
+    yesterday_date DATE;
+    retention_boundary_date DATE;
+    
+    -- Watermark Variables
+    target_table_max_date DATE;
+    calculated_start_date DATE;
+    start_date_str VARCHAR;
+    
+    -- Dynamic SQL Variable
+    sql_command VARCHAR;
+
+    -- Test Variables (Used to simulate database states)
+    LOGS VARCHAR DEFAULT ''Validation Results:\\\\n-------------------\\\\n'';
+    TEST_SCENARIOS ARRAY DEFAULT ARRAY_CONSTRUCT(
+        NULL,                                         -- Scenario 1: Table is empty (Returns NULL)
+        ''2020-01-01'',                                 -- Scenario 2: Data is very old (Older than 30 days)
+        TO_VARCHAR(DATEADD(day, -2, CURRENT_DATE()))  -- Scenario 3: Data is fresh (2 days ago)
+    );
+    current_simulated_max_date VARCHAR;
+
+    -- Variables for fetching from dynamic SQL
+    res RESULTSET;
+    c1 CURSOR FOR SELECT NULL; -- Initialized with a dummy query
+
+BEGIN
+    -- Calculate Baseline Dates
+    yesterday_date := DATEADD(day, -1, CURRENT_DATE());
+    retention_boundary_date := DATEADD(day, -LOOKBACK_DAYS, yesterday_date);
+
+    LOGS := LOGS || ''Retention Boundary (30 days ago): '' || retention_boundary_date || ''\\\\n\\\\n'';
+
+    -- Loop through Scenarios to prove logic works
+    FOR i IN 0 TO ARRAY_SIZE(TEST_SCENARIOS) - 1 DO
+        
+        -- SIMULATION: 
+        -- In your real SP, you will derive the table name here.
+        -- We simulate the SQL result here by grabbing a value from our test array.
+        current_simulated_max_date := TEST_SCENARIOS[i];
+        
+        -- Construct a dummy query to validate EXECUTE IMMEDIATE ... INTO syntax works
+        IF (current_simulated_max_date IS NULL) THEN
+            sql_command := ''SELECT NULL''; 
+        ELSE
+            sql_command := ''SELECT '''''' || current_simulated_max_date || ''''''::DATE'';
+        END IF;
+
+        -- =======================================================
+        -- START: WATERMARK CALCULATION LOGIC
+        -- =======================================================
+        
+        -- Step A: Run the Dynamic SQL and fetch the result into a variable
+        res := (EXECUTE IMMEDIATE sql_command);
+        OPEN c1 FOR res; -- Open the cursor FOR the dynamic result set
+        FETCH c1 INTO target_table_max_date;
+        CLOSE c1;
+
+        -- Step B: Handle NULL (First Load)
+        IF (target_table_max_date IS NULL) THEN
+            target_table_max_date := ''1900-01-01''::DATE;
+        END IF;
+
+        -- Step C: Compare Max Date vs Retention Boundary
+        -- We use IF/ELSE here as it is cleaner than CASE in procedural blocks
+        IF (target_table_max_date > retention_boundary_date) THEN
+            calculated_start_date := target_table_max_date;
+        ELSE
+            calculated_start_date := retention_boundary_date;
+        END IF;
+
+        -- Step D: Convert to String for SPROC call
+        start_date_str := TO_VARCHAR(calculated_start_date, DATE_FORMAT);
+
+        -- =======================================================
+        -- END: WATERMARK CALCULATION LOGIC
+        -- =======================================================
+
+        -- Logging results for review
+        LOGS := LOGS || ''Scenario '' || (i+1) || '': '' ||
+                ''Table Max Date ['' || COALESCE(current_simulated_max_date, ''NULL'') || ''] '' ||
+                ''-> Calculated Start Date: '' || start_date_str || ''\\\\n'';
+
+    END FOR;
+
+    RETURN LOGS;
+END';"
+PROCEDURE,DATAWAREHOUSE,CREATE_TABLE_DW(TABLE_NAME_INPUT VARCHAR),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAWAREHOUSE.CREATE_TABLE_DW(TABLE_NAME_INPUT VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAWAREHOUSE,CREATE_DW_UPDATE(TABLE_NAME_INPUT VARCHAR),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAWAREHOUSE.CREATE_DW_UPDATE(TABLE_NAME_INPUT VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAWAREHOUSE,"SP_LOAD_DATASHARE_ITEMS(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAWAREHOUSE.SP_LOAD_DATASHARE_ITEMS(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAWAREHOUSE,CREATE_LOAD_STAGE(TABLE_NAME_INPUT VARCHAR),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAWAREHOUSE.CREATE_LOAD_STAGE(TABLE_NAME_INPUT VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAWAREHOUSE,"SP_REPORT_PMIX(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAWAREHOUSE.SP_REPORT_PMIX(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAWAREHOUSE,CREATE_DW_LOAD(TABLE_NAME_INPUT VARCHAR),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAWAREHOUSE.CREATE_DW_LOAD(TABLE_NAME_INPUT VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAWAREHOUSE,"SP_REPORT_LABOR(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAWAREHOUSE.SP_REPORT_LABOR(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAWAREHOUSE,"SP_REPORT_CASH(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAWAREHOUSE.SP_REPORT_CASH(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAWAREHOUSE_HOLD,"SP_LOAD_DATASHARE_ITEMS(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAWAREHOUSE_HOLD.SP_LOAD_DATASHARE_ITEMS(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAWAREHOUSE_HOLD,"SP_REPORT_PMIX(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAWAREHOUSE_HOLD.SP_REPORT_PMIX(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAWAREHOUSE_HOLD,CREATE_DW_LOAD(TABLE_NAME_INPUT VARCHAR),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAWAREHOUSE_HOLD.CREATE_DW_LOAD(TABLE_NAME_INPUT VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAWAREHOUSE_HOLD,CREATE_TABLE_DW(TABLE_NAME_INPUT VARCHAR),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAWAREHOUSE_HOLD.CREATE_TABLE_DW(TABLE_NAME_INPUT VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAWAREHOUSE_HOLD,"SP_REPORT_LABOR(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAWAREHOUSE_HOLD.SP_REPORT_LABOR(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAWAREHOUSE_HOLD,CREATE_LOAD_STAGE(TABLE_NAME_INPUT VARCHAR),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAWAREHOUSE_HOLD.CREATE_LOAD_STAGE(TABLE_NAME_INPUT VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAWAREHOUSE_HOLD,CREATE_DW_UPDATE(TABLE_NAME_INPUT VARCHAR),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAWAREHOUSE_HOLD.CREATE_DW_UPDATE(TABLE_NAME_INPUT VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAWAREHOUSE_HOLD,"SP_REPORT_CASH(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAWAREHOUSE_HOLD.SP_REPORT_CASH(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAWAREHOUSE_OLD,CREATE_DW_LOAD(TABLE_NAME_INPUT VARCHAR),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAWAREHOUSE_OLD.CREATE_DW_LOAD(TABLE_NAME_INPUT VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAWAREHOUSE_OLD,CREATE_DW_UPDATE(TABLE_NAME_INPUT VARCHAR),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAWAREHOUSE_OLD.CREATE_DW_UPDATE(TABLE_NAME_INPUT VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAWAREHOUSE_OLD,CREATE_LOAD_STAGE(TABLE_NAME_INPUT VARCHAR),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAWAREHOUSE_OLD.CREATE_LOAD_STAGE(TABLE_NAME_INPUT VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAWAREHOUSE_OLD,CREATE_TABLE_DW(TABLE_NAME_INPUT VARCHAR),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAWAREHOUSE_OLD.CREATE_TABLE_DW(TABLE_NAME_INPUT VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAWAREHOUSE_TEMP,"SP_REPORT_PMIX(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAWAREHOUSE_TEMP.SP_REPORT_PMIX(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAWAREHOUSE_TEMP,CREATE_TABLE_DW(TABLE_NAME_INPUT VARCHAR),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAWAREHOUSE_TEMP.CREATE_TABLE_DW(TABLE_NAME_INPUT VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAWAREHOUSE_TEMP,"SP_REPORT_LABOR(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAWAREHOUSE_TEMP.SP_REPORT_LABOR(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAWAREHOUSE_TEMP,CREATE_DW_UPDATE(TABLE_NAME_INPUT VARCHAR),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAWAREHOUSE_TEMP.CREATE_DW_UPDATE(TABLE_NAME_INPUT VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAWAREHOUSE_TEMP,"SP_LOAD_DATASHARE_ITEMS(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAWAREHOUSE_TEMP.SP_LOAD_DATASHARE_ITEMS(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAWAREHOUSE_TEMP,"SP_REPORT_CASH(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAWAREHOUSE_TEMP.SP_REPORT_CASH(STARTDATE TIMESTAMP_TZ, ENDDATE TIMESTAMP_TZ, LOCATIONID VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAWAREHOUSE_TEMP,CREATE_DW_LOAD(TABLE_NAME_INPUT VARCHAR),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAWAREHOUSE_TEMP.CREATE_DW_LOAD(TABLE_NAME_INPUT VARCHAR)' does not exist or not authorized."
+PROCEDURE,DATAWAREHOUSE_TEMP,CREATE_LOAD_STAGE(TABLE_NAME_INPUT VARCHAR),"ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.DATAWAREHOUSE_TEMP.CREATE_LOAD_STAGE(TABLE_NAME_INPUT VARCHAR)' does not exist or not authorized."
+PROCEDURE,GITHUB,"EXPORT_PROCEDURES_DDLS(DB VARCHAR, TARGET_SCHEMA VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.GITHUB.EXPORT_PROCEDURES_DDLS(DB VARCHAR, TARGET_SCHEMA VARCHAR)' does not exist or not authorized."
+PROCEDURE,GITHUB,"EXPORT_VIEWS_DDLS(DB VARCHAR, TARGET_SCHEMA VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.GITHUB.EXPORT_VIEWS_DDLS(DB VARCHAR, TARGET_SCHEMA VARCHAR)' does not exist or not authorized."
+PROCEDURE,GITHUB,"EXPORT_TABLES_DDLS(DB VARCHAR, TARGET_SCHEMA VARCHAR)","ERROR: SQL compilation error:
+Object 'PRD_HOSPENG_REPORTING.GITHUB.EXPORT_TABLES_DDLS(DB VARCHAR, TARGET_SCHEMA VARCHAR)' does not exist or not authorized."

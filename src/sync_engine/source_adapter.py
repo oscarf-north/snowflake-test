@@ -41,6 +41,13 @@ def _load_from_csv_folder(data_folder: Path, db_name: str) -> pd.DataFrame:
 
     df_all = pd.concat(dfs, ignore_index=True)
 
+    # Filter out rows where DDL contains "ERROR: SQL compilation error"
+    initial_rows = len(df_all)
+    df_all = df_all[~df_all['DDL'].str.contains("ERROR: SQL compilation error", na=False)]
+    filtered_rows = initial_rows - len(df_all)
+    if filtered_rows > 0:
+        print(f"Filtered out {filtered_rows} objects with 'ERROR: SQL compilation error' in DDL.")
+
     # Get the list of allowed schemas for the given database.
     # Fallback to the default list if the db_name is not found.
     allowed_schemas = ALLOWED_SCHEMAS_BY_DB.get(db_name, ALLOWED_SCHEMAS_BY_DB.get("default", []))
