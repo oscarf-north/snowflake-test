@@ -5,16 +5,16 @@ from typing import Optional
 
 import pandas as pd
 
-from .config import DB_BASE_PATH, OBJECT_TYPE_MAP
+from .config import DB_PATH, OBJECT_TYPE_MAP
 from .utils import normalize
 
 
-def get_file_path(row: pd.Series) -> Optional[Path]:
+def get_file_path(row: pd.Series, db_name: str) -> Optional[Path]:
     """
     From a DataFrame row with (object_type, schema_name, object_name, ddl),
     compute the output file path:
 
-        db/PRD_HOSPEND_REPORTING/<SCHEMA>/<type_folder>/<OBJECT_NAME>.sql
+        db/<db_name>/<SCHEMA>/<type_folder>/<OBJECT_NAME>.sql
 
     Returns None if the object_type is not supported/mapped.
     """
@@ -28,7 +28,7 @@ def get_file_path(row: pd.Series) -> Optional[Path]:
         return None
 
     # Build the schema folder
-    target_dir = DB_BASE_PATH / schema / type_folder
+    target_dir = DB_PATH / db_name / schema / type_folder
     target_dir.mkdir(parents=True, exist_ok=True)
 
     return target_dir / f"{obj_name}.sql"

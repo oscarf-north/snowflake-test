@@ -10,6 +10,6 @@ This repository manages Snowflake database objects using version control (Git) a
 
 ## Structure Overview
 - /db -> Source of truth for database objects. 
-- /scripts -> Utility scripts for extraction and deployment. 
+- /src -> Utility scripts for extraction and deployment. 
 - /config -> Environment and deployment parameters. 
 - /docs -> Documentation

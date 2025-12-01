@@ -7,7 +7,7 @@ def test_github_connection():
     repo = os.getenv("GH_REPO")
 
     if not token or not user or not repo:
-        return "❌ Missing required environment variables: GH_PAT, GH_USER, GH_REPO"
+        return "❌ Missing required environment variables: GH_TOKEN, GH_USER, GH_REPO"
 
     url = f"https://api.github.com/repos/{user}/{repo}"
     headers = {"Authorization": f"token {token}"}

@@ -1,10 +1,14 @@
-CREATE OR REPLACE PROCEDURE PRD_HOSPENG_REPORTING.GITHUB.EXPORT_TABLES_DDLS("DB" VARCHAR)
+CREATE OR REPLACE PROCEDURE PRD_HOSPENG_REPORTING.GITHUB.EXPORT_TABLES_DDLS("DB" VARCHAR, "TARGET_SCHEMA" VARCHAR)
 RETURNS VARCHAR
 LANGUAGE JAVASCRIPT
 EXECUTE AS OWNER
 AS '
+if (!TARGET_SCHEMA || TARGET_SCHEMA.trim() === '''') {
+    return "Error: TARGET_SCHEMA parameter is required and cannot be empty.";
+}
+
 var createTable = `
-CREATE TABLE IF NOT EXISTS PUBLIC.export_ddls_tables (
+CREATE TABLE IF NOT EXISTS ${TARGET_SCHEMA}.export_ddls_tables (
     object_type STRING,
     schema_name STRING,
     object_name STRING,
@@ -13,7 +17,7 @@ CREATE TABLE IF NOT EXISTS PUBLIC.export_ddls_tables (
 `;
 snowflake.createStatement({ sqlText: createTable }).execute();
 
-snowflake.createStatement({ sqlText: `TRUNCATE TABLE PUBLIC.export_ddls_tables` }).execute();
+snowflake.createStatement({ sqlText: `TRUNCATE TABLE ${TARGET_SCHEMA}.export_ddls_tables` }).execute();
 
 var getSchemas = `
     SELECT schema_name
@@ -47,14 +51,14 @@ while (rsSchemas.next()) {
             var ddlText = ddlRs.getColumnValue(1);
 
             var insert = `
-                INSERT INTO PUBLIC.export_ddls_tables (object_type, schema_name, object_name, ddl)
+                INSERT INTO ${TARGET_SCHEMA}.export_ddls_tables (object_type, schema_name, object_name, ddl)
                 VALUES (''TABLE'', ''${schema}'', ''${name}'', :1)
             `;
             snowflake.createStatement({ sqlText: insert, binds: [ddlText] }).execute();
 
         } catch (err) {
             var insertErr = `
-                INSERT INTO PUBLIC.export_ddls_tables (object_type, schema_name, object_name, ddl)
+                INSERT INTO ${TARGET_SCHEMA}.export_ddls_tables (object_type, schema_name, object_name, ddl)
                 VALUES (''TABLE'', ''${schema}'', ''${name}'', ''ERROR: '' || :1)
             `;
             snowflake.createStatement({ sqlText: insertErr, binds: [err.message] }).execute();

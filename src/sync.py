@@ -25,9 +25,14 @@ def main():
     parser = argparse.ArgumentParser(description="Sync DDLs to Git repository.")
     parser.add_argument(
         "--source",
-        default="csv",
+        required=True,
         choices=["csv", "snowflake"],
-        help="Where to read DDLs from (csv for now, snowflake in the future).",
+        help="Mandatory: Where to read DDLs from (e.g., 'csv' or 'snowflake').",
+    )
+    parser.add_argument(
+        "--database",
+        required=True,
+        help="Mandatory: The name of the database to sync.",
     )
     parser.add_argument(
         "--commit",
@@ -38,13 +43,13 @@ def main():
     args = parser.parse_args()
 
     # 1. Load all objects (tables, views, procedures...) from the chosen source.
-    df = load_source(source=args.source)
+    df = load_source(source=args.source, db_name=args.database)
 
     # 2. Iterate over each object and sync it to the file system.
     changes = 0
 
     for _, row in df.iterrows():
-        file_path = get_file_path(row)
+        file_path = get_file_path(row, db_name=args.database)
         if file_path is None:
             print(f"Skipping unsupported object type: {row['object_type']}")
             continue
