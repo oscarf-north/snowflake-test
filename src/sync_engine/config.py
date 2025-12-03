@@ -19,6 +19,8 @@ OBJECT_TYPE_MAP = {
     "TABLE": "tables",
     "VIEW": "views",
     "PROCEDURE": "procedures",
+    "TASK": "tasks",
+    "STAGE": "stages",
 }
 
 # Where git commands should run (repo root)
