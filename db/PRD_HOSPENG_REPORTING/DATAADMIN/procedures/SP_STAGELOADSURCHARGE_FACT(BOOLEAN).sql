@@ -1,0 +1,104 @@
+CREATE OR REPLACE PROCEDURE "SP_STAGELOADSURCHARGE_FACT"("VALIDATE_DATE" BOOLEAN)
+RETURNS TABLE ()
+LANGUAGE SQL
+EXECUTE AS OWNER
+AS 'DECLARE res resultset;
+      --validate_date boolean := TRUE;
+      errorCount_res resultset;
+      highwater int := IFNULL((SELECT MAX(MTLN_CDC_SEQUENCE_NUMBER) FROM DATAWAREHOUSE_TEMP.SURCHARGE_FACT),0);
+  BEGIN
+    res := (
+       INSERT INTO DATAWAREHOUSE_TEMP.SURCHARGE_FACT(   
+          SURCHARGE_FACT_NK, 
+          SURCHARGENAME, 
+          DW_STARTDATE, 
+          DW_ENDDATE, 
+          DW_ISDELETED, 
+          DW_RANGESTART, 
+          DW_RANGEEND, 
+          DW_ISCURRENTROW, 
+          MTLN_CDC_LAST_CHANGE_TYPE, 
+          MTLN_CDC_LAST_COMMIT_TIMESTAMP, 
+          MTLN_CDC_SEQUENCE_NUMBER, 
+          MTLN_CDC_LOAD_BATCH_ID, 
+          MTLN_CDC_LOAD_TIMESTAMP, 
+          MTLN_CDC_PROCESSED_DATE_HOUR, 
+          MTLN_CDC_SRC_VERSION, 
+          MTLN_CDC_FILENAME, 
+          MTLN_CDC_FILEPATH, 
+          MTLN_CDC_SRC_DATABASE, 
+          MTLN_CDC_SRC_SCHEMA, 
+          MTLN_CDC_SRC_TABLE, 
+          CHEQUE_FACT_FK, 
+          DAYPART_DIM_FK, 
+          EMPLOYEE_DIM_FK, 
+          LOCATION_DIM_FK, 
+          SURCHARGE_DIM_NK, 
+          IS_AUTOAPPLIED, 
+          IS_GRATUITY, 
+          IS_TAXABLE, 
+          IS_TRAINING, 
+          IS_PRINTONRECEIPT, 
+          CREATED_AT, 
+          FISCAL_DATE, 
+          OPENED_AT, 
+          UPDATED_AT, 
+          STATUS, 
+          CHEQUENUMBER, 
+          SURCHARGE_TYPE, 
+          QUANTITY, 
+          AMOUNT, 
+          APPLIEDAMOUNT 
+) 
+ SELECT   SURCHARGE_FACT_NK  as   SURCHARGE_FACT_NK,  
+   SURCHARGENAME  as   SURCHARGENAME,  
+   DW_STARTDATE  as   DW_STARTDATE,  
+   DW_ENDDATE  as   DW_ENDDATE,  
+   DW_ISDELETED  as   DW_ISDELETED,  
+   :highwater  as   DW_RANGESTART,  
+   MAX(MTLN_CDC_SEQUENCE_NUMBER) OVER(PARTITION BY 1)  as   DW_RANGEEND,  
+   DW_ISCURRENTROW  as   DW_ISCURRENTROW,  
+   MTLN_CDC_LAST_CHANGE_TYPE  as   MTLN_CDC_LAST_CHANGE_TYPE,  
+   MTLN_CDC_LAST_COMMIT_TIMESTAMP  as   MTLN_CDC_LAST_COMMIT_TIMESTAMP,  
+   MTLN_CDC_SEQUENCE_NUMBER  as   MTLN_CDC_SEQUENCE_NUMBER,  
+   MTLN_CDC_LOAD_BATCH_ID  as   MTLN_CDC_LOAD_BATCH_ID,  
+   MTLN_CDC_LOAD_TIMESTAMP  as   MTLN_CDC_LOAD_TIMESTAMP,  
+   MTLN_CDC_PROCESSED_DATE_HOUR  as   MTLN_CDC_PROCESSED_DATE_HOUR,  
+   MTLN_CDC_SRC_VERSION  as   MTLN_CDC_SRC_VERSION,  
+   MTLN_CDC_FILENAME  as   MTLN_CDC_FILENAME,  
+   MTLN_CDC_FILEPATH  as   MTLN_CDC_FILEPATH,  
+   MTLN_CDC_SRC_DATABASE  as   MTLN_CDC_SRC_DATABASE,  
+   MTLN_CDC_SRC_SCHEMA  as   MTLN_CDC_SRC_SCHEMA,  
+   MTLN_CDC_SRC_TABLE  as   MTLN_CDC_SRC_TABLE,  
+   CHEQUE_FACT_FK  as   CHEQUE_FACT_FK,  
+   DAYPART_DIM_FK  as   DAYPART_DIM_FK,  
+   EMPLOYEE_DIM_FK  as   EMPLOYEE_DIM_FK,  
+   LOCATION_DIM_FK  as   LOCATION_DIM_FK,  
+   SURCHARGE_DIM_NK  as   SURCHARGE_DIM_NK,  
+   IS_AUTOAPPLIED  as   IS_AUTOAPPLIED,  
+   IS_GRATUITY  as   IS_GRATUITY,  
+   IS_TAXABLE  as   IS_TAXABLE,  
+   IS_TRAINING  as   IS_TRAINING,  
+   IS_PRINTONRECEIPT  as   IS_PRINTONRECEIPT,  
+   CREATED_AT  as   CREATED_AT,  
+   FISCAL_DATE  as   FISCAL_DATE,  
+   OPENED_AT  as   OPENED_AT,  
+   UPDATED_AT  as   UPDATED_AT,  
+   STATUS  as   STATUS,  
+   CHEQUENUMBER  as   CHEQUENUMBER,  
+   SURCHARGE_TYPE  as   SURCHARGE_TYPE,  
+   QUANTITY  as   QUANTITY,  
+   AMOUNT  as   AMOUNT,  
+   APPLIEDAMOUNT  as   APPLIEDAMOUNT 
+  FROM DATAADMIN.SURCHARGE_FACT
+     WHERE MTLN_CDC_SEQUENCE_NUMBER > :highwater);
+
+ 
+ --======================================================================================================================== 
+
+ 
+--========================================================================================================================
+CALL SP_UpdateDWTable( ''DATASTAGE'', ''SURCHARGE_FACT'');
+IF (validate_date = TRUE)  THEN  errorCount_res := (CALL DATAADMIN.SP_ValidateDWDates(''p'',''SURCHARGE_FACT'',''COUNT''));
+END IF;
+return table(errorCount_res); END';

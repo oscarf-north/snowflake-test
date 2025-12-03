@@ -1,0 +1,110 @@
+CREATE OR REPLACE PROCEDURE "SP_STAGELOADSHIFT_DIM"("VALIDATE_DATE" BOOLEAN)
+RETURNS TABLE ()
+LANGUAGE SQL
+EXECUTE AS OWNER
+AS 'DECLARE res resultset;
+      --validate_date boolean := TRUE;
+      errorCount_res resultset;
+      highwater int := IFNULL((SELECT MAX(MTLN_CDC_SEQUENCE_NUMBER) FROM DATAWAREHOUSE_TEMP.SHIFT_DIM),0);
+  BEGIN
+    res := (
+       INSERT INTO DATAWAREHOUSE_TEMP.SHIFT_DIM(   
+          SHIFT_DIM_NK, 
+          SHIFT, 
+          DW_STARTDATE, 
+          DW_ENDDATE, 
+          DW_ISDELETED, 
+          DW_RANGESTART, 
+          DW_RANGEEND, 
+          DW_ISCURRENTROW, 
+          MTLN_CDC_LAST_CHANGE_TYPE, 
+          MTLN_CDC_LAST_COMMIT_TIMESTAMP, 
+          MTLN_CDC_SEQUENCE_NUMBER, 
+          MTLN_CDC_LOAD_BATCH_ID, 
+          MTLN_CDC_LOAD_TIMESTAMP, 
+          MTLN_CDC_PROCESSED_DATE_HOUR, 
+          MTLN_CDC_SRC_VERSION, 
+          MTLN_CDC_FILENAME, 
+          MTLN_CDC_FILEPATH, 
+          MTLN_CDC_SRC_DATABASE, 
+          MTLN_CDC_SRC_SCHEMA, 
+          MTLN_CDC_SRC_TABLE, 
+          EMPLOYEE_DIM_FK, 
+          LOCATION_DIM_FK, 
+          JOBPOSITION_DIM_FK, 
+          WAS_SYSTEM_CLOCKOUT, 
+          IS_ARCHIVED, 
+          IS_SHIFTCOMPLETE, 
+          PAY_RATE_BASIS, 
+          GETS_PAID_BREAK, 
+          CREATED_AT, 
+          UPDATED_AT, 
+          ORIGINAL_CLOCKIN_AT, 
+          FISCAL_DAY, 
+          CLOCKEDIN_AT, 
+          CLOCKEDOUT_AT, 
+          ARCHIVED_AT, 
+          SHIFT_START_AT, 
+          SHIFT_END_AT, 
+          GENERAL_LEDGER, 
+          REGULAR_RATE, 
+          SHIFT_SECONDS, 
+          SHIFT_MINUTES, 
+          SHIFT_HOURS, 
+          SHIFT_DAYS 
+) 
+ SELECT   SHIFT_DIM_NK  as   SHIFT_DIM_NK,  
+   SHIFT  as   SHIFT,  
+   DW_STARTDATE  as   DW_STARTDATE,  
+   DW_ENDDATE  as   DW_ENDDATE,  
+   DW_ISDELETED  as   DW_ISDELETED,  
+   :highwater  as   DW_RANGESTART,  
+   MAX(MTLN_CDC_SEQUENCE_NUMBER) OVER(PARTITION BY 1)  as   DW_RANGEEND,  
+   DW_ISCURRENTROW  as   DW_ISCURRENTROW,  
+   MTLN_CDC_LAST_CHANGE_TYPE  as   MTLN_CDC_LAST_CHANGE_TYPE,  
+   MTLN_CDC_LAST_COMMIT_TIMESTAMP  as   MTLN_CDC_LAST_COMMIT_TIMESTAMP,  
+   MTLN_CDC_SEQUENCE_NUMBER  as   MTLN_CDC_SEQUENCE_NUMBER,  
+   MTLN_CDC_LOAD_BATCH_ID  as   MTLN_CDC_LOAD_BATCH_ID,  
+   MTLN_CDC_LOAD_TIMESTAMP  as   MTLN_CDC_LOAD_TIMESTAMP,  
+   MTLN_CDC_PROCESSED_DATE_HOUR  as   MTLN_CDC_PROCESSED_DATE_HOUR,  
+   MTLN_CDC_SRC_VERSION  as   MTLN_CDC_SRC_VERSION,  
+   MTLN_CDC_FILENAME  as   MTLN_CDC_FILENAME,  
+   MTLN_CDC_FILEPATH  as   MTLN_CDC_FILEPATH,  
+   MTLN_CDC_SRC_DATABASE  as   MTLN_CDC_SRC_DATABASE,  
+   MTLN_CDC_SRC_SCHEMA  as   MTLN_CDC_SRC_SCHEMA,  
+   MTLN_CDC_SRC_TABLE  as   MTLN_CDC_SRC_TABLE,  
+   EMPLOYEE_DIM_FK  as   EMPLOYEE_DIM_FK,  
+   LOCATION_DIM_FK  as   LOCATION_DIM_FK,  
+   JOBPOSITION_DIM_FK  as   JOBPOSITION_DIM_FK,  
+   WAS_SYSTEM_CLOCKOUT  as   WAS_SYSTEM_CLOCKOUT,  
+   IS_ARCHIVED  as   IS_ARCHIVED,  
+   IS_SHIFTCOMPLETE  as   IS_SHIFTCOMPLETE,  
+   PAY_RATE_BASIS  as   PAY_RATE_BASIS,  
+   GETS_PAID_BREAK  as   GETS_PAID_BREAK,  
+   CREATED_AT  as   CREATED_AT,  
+   UPDATED_AT  as   UPDATED_AT,  
+   ORIGINAL_CLOCKIN_AT  as   ORIGINAL_CLOCKIN_AT,  
+   FISCAL_DAY  as   FISCAL_DAY,  
+   CLOCKEDIN_AT  as   CLOCKEDIN_AT,  
+   CLOCKEDOUT_AT  as   CLOCKEDOUT_AT,  
+   ARCHIVED_AT  as   ARCHIVED_AT,  
+   SHIFT_START_AT  as   SHIFT_START_AT,  
+   SHIFT_END_AT  as   SHIFT_END_AT,  
+   GENERAL_LEDGER  as   GENERAL_LEDGER,  
+   REGULAR_RATE  as   REGULAR_RATE,  
+   SHIFT_SECONDS  as   SHIFT_SECONDS,  
+   SHIFT_MINUTES  as   SHIFT_MINUTES,  
+   SHIFT_HOURS  as   SHIFT_HOURS,  
+   SHIFT_DAYS  as   SHIFT_DAYS 
+  FROM DATAADMIN.SHIFT_DIM
+     WHERE MTLN_CDC_SEQUENCE_NUMBER > :highwater);
+
+ 
+ --======================================================================================================================== 
+
+ 
+--========================================================================================================================
+CALL SP_UpdateDWTable( ''DATASTAGE'', ''SHIFT_DIM'');
+IF (validate_date = TRUE)  THEN  errorCount_res := (CALL DATAADMIN.SP_ValidateDWDates(''p'',''SHIFT_DIM'',''COUNT''));
+END IF;
+return table(errorCount_res); END';

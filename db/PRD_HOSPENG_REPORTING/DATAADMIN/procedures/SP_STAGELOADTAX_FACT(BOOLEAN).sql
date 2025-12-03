@@ -1,0 +1,116 @@
+CREATE OR REPLACE PROCEDURE "SP_STAGELOADTAX_FACT"("VALIDATE_DATE" BOOLEAN)
+RETURNS TABLE ()
+LANGUAGE SQL
+EXECUTE AS OWNER
+AS 'DECLARE res resultset;
+      --validate_date boolean := TRUE;
+      errorCount_res resultset;
+      highwater int := IFNULL((SELECT MAX(MTLN_CDC_SEQUENCE_NUMBER) FROM DATAWAREHOUSE_TEMP.TAX_FACT),0);
+  BEGIN
+    res := (
+       INSERT INTO DATAWAREHOUSE_TEMP.TAX_FACT(   
+          TAX_FACT_NK, 
+          TAXRATENAME, 
+          DW_STARTDATE, 
+          DW_ENDDATE, 
+          DW_ISDELETED, 
+          DW_RANGESTART, 
+          DW_RANGEEND, 
+          DW_ISCURRENTROW, 
+          MTLN_CDC_LAST_CHANGE_TYPE, 
+          MTLN_CDC_LAST_COMMIT_TIMESTAMP, 
+          MTLN_CDC_SEQUENCE_NUMBER, 
+          MTLN_CDC_LOAD_BATCH_ID, 
+          MTLN_CDC_LOAD_TIMESTAMP, 
+          MTLN_CDC_PROCESSED_DATE_HOUR, 
+          MTLN_CDC_SRC_VERSION, 
+          MTLN_CDC_FILENAME, 
+          MTLN_CDC_FILEPATH, 
+          MTLN_CDC_SRC_DATABASE, 
+          MTLN_CDC_SRC_SCHEMA, 
+          MTLN_CDC_SRC_TABLE, 
+          CHEQUE_FACT_FK, 
+          DAYPART_DIM_FK, 
+          EMPLOYEE_DIM_FK, 
+          ITEM_FACT_FK, 
+          LOCATION_DIM_FK, 
+          MENUITEM_DIM_FK, 
+          MENUITEMNAME_DIM_FK, 
+          ORDERTYPE_DIM_FK, 
+          TAX_RATE_ID, 
+          IS_TRAINING, 
+          IS_TAX_INCLUDED, 
+          CLOSED_AT, 
+          CREATED_AT, 
+          FISCAL_DATE, 
+          OPENED_AT, 
+          UPDATED_AT, 
+          CHECKSTATUS, 
+          ITEMSTATUS, 
+          REVENUECENTERNAME, 
+          ROUNDINGMETHOD, 
+          CHEQUENUMBER, 
+          ITEM_ID, 
+          CHECKTOTALINCLUSIVETAX, 
+          CHECKTOTALTAX, 
+          AMOUNT, 
+          PERCENT 
+) 
+ SELECT   TAX_FACT_NK  as   TAX_FACT_NK,  
+   TAXRATENAME  as   TAXRATENAME,  
+   DW_STARTDATE  as   DW_STARTDATE,  
+   DW_ENDDATE  as   DW_ENDDATE,  
+   DW_ISDELETED  as   DW_ISDELETED,  
+   :highwater  as   DW_RANGESTART,  
+   MAX(MTLN_CDC_SEQUENCE_NUMBER) OVER(PARTITION BY 1)  as   DW_RANGEEND,  
+   DW_ISCURRENTROW  as   DW_ISCURRENTROW,  
+   MTLN_CDC_LAST_CHANGE_TYPE  as   MTLN_CDC_LAST_CHANGE_TYPE,  
+   MTLN_CDC_LAST_COMMIT_TIMESTAMP  as   MTLN_CDC_LAST_COMMIT_TIMESTAMP,  
+   MTLN_CDC_SEQUENCE_NUMBER  as   MTLN_CDC_SEQUENCE_NUMBER,  
+   MTLN_CDC_LOAD_BATCH_ID  as   MTLN_CDC_LOAD_BATCH_ID,  
+   MTLN_CDC_LOAD_TIMESTAMP  as   MTLN_CDC_LOAD_TIMESTAMP,  
+   MTLN_CDC_PROCESSED_DATE_HOUR  as   MTLN_CDC_PROCESSED_DATE_HOUR,  
+   MTLN_CDC_SRC_VERSION  as   MTLN_CDC_SRC_VERSION,  
+   MTLN_CDC_FILENAME  as   MTLN_CDC_FILENAME,  
+   MTLN_CDC_FILEPATH  as   MTLN_CDC_FILEPATH,  
+   MTLN_CDC_SRC_DATABASE  as   MTLN_CDC_SRC_DATABASE,  
+   MTLN_CDC_SRC_SCHEMA  as   MTLN_CDC_SRC_SCHEMA,  
+   MTLN_CDC_SRC_TABLE  as   MTLN_CDC_SRC_TABLE,  
+   CHEQUE_FACT_FK  as   CHEQUE_FACT_FK,  
+   DAYPART_DIM_FK  as   DAYPART_DIM_FK,  
+   EMPLOYEE_DIM_FK  as   EMPLOYEE_DIM_FK,  
+   ITEM_FACT_FK  as   ITEM_FACT_FK,  
+   LOCATION_DIM_FK  as   LOCATION_DIM_FK,  
+   MENUITEM_DIM_FK  as   MENUITEM_DIM_FK,  
+   MENUITEMNAME_DIM_FK  as   MENUITEMNAME_DIM_FK,  
+   ORDERTYPE_DIM_FK  as   ORDERTYPE_DIM_FK,  
+   TAX_RATE_ID  as   TAX_RATE_ID,  
+   IS_TRAINING  as   IS_TRAINING,  
+   IS_TAX_INCLUDED  as   IS_TAX_INCLUDED,  
+   CLOSED_AT  as   CLOSED_AT,  
+   CREATED_AT  as   CREATED_AT,  
+   FISCAL_DATE  as   FISCAL_DATE,  
+   OPENED_AT  as   OPENED_AT,  
+   UPDATED_AT  as   UPDATED_AT,  
+   CHECKSTATUS  as   CHECKSTATUS,  
+   ITEMSTATUS  as   ITEMSTATUS,  
+   REVENUECENTERNAME  as   REVENUECENTERNAME,  
+   ROUNDINGMETHOD  as   ROUNDINGMETHOD,  
+   CHEQUENUMBER  as   CHEQUENUMBER,  
+   ITEM_ID  as   ITEM_ID,  
+   CHECKTOTALINCLUSIVETAX  as   CHECKTOTALINCLUSIVETAX,  
+   CHECKTOTALTAX  as   CHECKTOTALTAX,  
+   AMOUNT  as   AMOUNT,  
+   PERCENT  as   PERCENT 
+  FROM DATAADMIN.TAX_FACT
+     WHERE MTLN_CDC_SEQUENCE_NUMBER > :highwater);
+
+ 
+ --======================================================================================================================== 
+
+ 
+--========================================================================================================================
+CALL SP_UpdateDWTable( ''DATASTAGE'', ''TAX_FACT'');
+IF (validate_date = TRUE)  THEN  errorCount_res := (CALL DATAADMIN.SP_ValidateDWDates(''p'',''TAX_FACT'',''COUNT''));
+END IF;
+return table(errorCount_res); END';

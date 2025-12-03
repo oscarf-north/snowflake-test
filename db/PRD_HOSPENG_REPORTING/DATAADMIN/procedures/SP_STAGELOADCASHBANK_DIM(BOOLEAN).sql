@@ -1,0 +1,78 @@
+CREATE OR REPLACE PROCEDURE "SP_STAGELOADCASHBANK_DIM"("VALIDATE_DATE" BOOLEAN)
+RETURNS TABLE ()
+LANGUAGE SQL
+EXECUTE AS OWNER
+AS 'DECLARE res resultset;
+      --validate_date boolean := TRUE;
+      errorCount_res resultset;
+      highwater int := IFNULL((SELECT MAX(MTLN_CDC_SEQUENCE_NUMBER) FROM DATAWAREHOUSE_TEMP.CASHBANK_DIM),0);
+  BEGIN
+    res := (
+       INSERT INTO DATAWAREHOUSE_TEMP.CASHBANK_DIM(   
+          CASHBANK_DIM_NK, 
+          CASHBANK, 
+          DW_STARTDATE, 
+          DW_ENDDATE, 
+          DW_ISDELETED, 
+          DW_RANGESTART, 
+          DW_RANGEEND, 
+          DW_ISCURRENTROW, 
+          MTLN_CDC_LAST_CHANGE_TYPE, 
+          MTLN_CDC_LAST_COMMIT_TIMESTAMP, 
+          MTLN_CDC_SEQUENCE_NUMBER, 
+          MTLN_CDC_LOAD_BATCH_ID, 
+          MTLN_CDC_LOAD_TIMESTAMP, 
+          MTLN_CDC_PROCESSED_DATE_HOUR, 
+          MTLN_CDC_SRC_VERSION, 
+          MTLN_CDC_FILENAME, 
+          MTLN_CDC_FILEPATH, 
+          MTLN_CDC_SRC_DATABASE, 
+          MTLN_CDC_SRC_SCHEMA, 
+          MTLN_CDC_SRC_TABLE, 
+          SHIFT_DIM_FK, 
+          CREATED_AT, 
+          UPDATED_AT, 
+          STATUS, 
+          EXPECTED_AMOUNT, 
+          OPEN_AMOUNT, 
+          CLOSE_AMOUNT 
+) 
+ SELECT   CASHBANK_DIM_NK  as   CASHBANK_DIM_NK,  
+   CASHBANK  as   CASHBANK,  
+   DW_STARTDATE  as   DW_STARTDATE,  
+   DW_ENDDATE  as   DW_ENDDATE,  
+   DW_ISDELETED  as   DW_ISDELETED,  
+   :highwater  as   DW_RANGESTART,  
+   MAX(MTLN_CDC_SEQUENCE_NUMBER) OVER(PARTITION BY 1)  as   DW_RANGEEND,  
+   DW_ISCURRENTROW  as   DW_ISCURRENTROW,  
+   MTLN_CDC_LAST_CHANGE_TYPE  as   MTLN_CDC_LAST_CHANGE_TYPE,  
+   MTLN_CDC_LAST_COMMIT_TIMESTAMP  as   MTLN_CDC_LAST_COMMIT_TIMESTAMP,  
+   MTLN_CDC_SEQUENCE_NUMBER  as   MTLN_CDC_SEQUENCE_NUMBER,  
+   MTLN_CDC_LOAD_BATCH_ID  as   MTLN_CDC_LOAD_BATCH_ID,  
+   MTLN_CDC_LOAD_TIMESTAMP  as   MTLN_CDC_LOAD_TIMESTAMP,  
+   MTLN_CDC_PROCESSED_DATE_HOUR  as   MTLN_CDC_PROCESSED_DATE_HOUR,  
+   MTLN_CDC_SRC_VERSION  as   MTLN_CDC_SRC_VERSION,  
+   MTLN_CDC_FILENAME  as   MTLN_CDC_FILENAME,  
+   MTLN_CDC_FILEPATH  as   MTLN_CDC_FILEPATH,  
+   MTLN_CDC_SRC_DATABASE  as   MTLN_CDC_SRC_DATABASE,  
+   MTLN_CDC_SRC_SCHEMA  as   MTLN_CDC_SRC_SCHEMA,  
+   MTLN_CDC_SRC_TABLE  as   MTLN_CDC_SRC_TABLE,  
+   SHIFT_DIM_FK  as   SHIFT_DIM_FK,  
+   CREATED_AT  as   CREATED_AT,  
+   UPDATED_AT  as   UPDATED_AT,  
+   STATUS  as   STATUS,  
+   EXPECTED_AMOUNT  as   EXPECTED_AMOUNT,  
+   OPEN_AMOUNT  as   OPEN_AMOUNT,  
+   CLOSE_AMOUNT  as   CLOSE_AMOUNT 
+  FROM DATAADMIN.CASHBANK_DIM
+     WHERE MTLN_CDC_SEQUENCE_NUMBER > :highwater);
+
+ 
+ --======================================================================================================================== 
+
+ 
+--========================================================================================================================
+CALL SP_UpdateDWTable( ''DATASTAGE'', ''CASHBANK_DIM'');
+IF (validate_date = TRUE)  THEN  errorCount_res := (CALL DATAADMIN.SP_ValidateDWDates(''p'',''CASHBANK_DIM'',''COUNT''));
+END IF;
+return table(errorCount_res); END';

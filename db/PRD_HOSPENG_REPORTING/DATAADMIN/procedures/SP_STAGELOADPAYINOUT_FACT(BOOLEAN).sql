@@ -1,0 +1,94 @@
+CREATE OR REPLACE PROCEDURE "SP_STAGELOADPAYINOUT_FACT"("VALIDATE_DATE" BOOLEAN)
+RETURNS TABLE ()
+LANGUAGE SQL
+EXECUTE AS OWNER
+AS 'DECLARE res resultset;
+      --validate_date boolean := TRUE;
+      errorCount_res resultset;
+      highwater int := IFNULL((SELECT MAX(MTLN_CDC_SEQUENCE_NUMBER) FROM DATAWAREHOUSE_TEMP.PAYINOUT_FACT),0);
+  BEGIN
+    res := (
+       INSERT INTO DATAWAREHOUSE_TEMP.PAYINOUT_FACT(   
+          PAYINOUT_FACT_NK, 
+          PAYID, 
+          DW_STARTDATE, 
+          DW_ENDDATE, 
+          DW_ISDELETED, 
+          DW_RANGESTART, 
+          DW_RANGEEND, 
+          DW_ISCURRENTROW, 
+          MTLN_CDC_LAST_CHANGE_TYPE, 
+          MTLN_CDC_LAST_COMMIT_TIMESTAMP, 
+          MTLN_CDC_SEQUENCE_NUMBER, 
+          MTLN_CDC_LOAD_BATCH_ID, 
+          MTLN_CDC_LOAD_TIMESTAMP, 
+          MTLN_CDC_PROCESSED_DATE_HOUR, 
+          MTLN_CDC_SRC_VERSION, 
+          MTLN_CDC_FILENAME, 
+          MTLN_CDC_FILEPATH, 
+          MTLN_CDC_SRC_DATABASE, 
+          MTLN_CDC_SRC_SCHEMA, 
+          MTLN_CDC_SRC_TABLE, 
+          CCTRANSATION_FACT_FK, 
+          PAYMENTMETHOD_DIM_FK, 
+          PAYINPAYOUTREASON_DIM_FK, 
+          SHIFT_DIM_FK, 
+          IS_VOID, 
+          VOIDED_AT, 
+          CREATED_AT, 
+          UPDATED_AT, 
+          STATUS, 
+          VOIDED_BY, 
+          NOTES, 
+          CC_TRANSACTION_ID, 
+          PAY_IN_OUT_REASON_ID, 
+          SHIFT_ID, 
+          AMOUNT 
+) 
+ SELECT   PAYINOUT_FACT_NK  as   PAYINOUT_FACT_NK,  
+   PAYID  as   PAYID,  
+   DW_STARTDATE  as   DW_STARTDATE,  
+   DW_ENDDATE  as   DW_ENDDATE,  
+   DW_ISDELETED  as   DW_ISDELETED,  
+   :highwater  as   DW_RANGESTART,  
+   MAX(MTLN_CDC_SEQUENCE_NUMBER) OVER(PARTITION BY 1)  as   DW_RANGEEND,  
+   DW_ISCURRENTROW  as   DW_ISCURRENTROW,  
+   MTLN_CDC_LAST_CHANGE_TYPE  as   MTLN_CDC_LAST_CHANGE_TYPE,  
+   MTLN_CDC_LAST_COMMIT_TIMESTAMP  as   MTLN_CDC_LAST_COMMIT_TIMESTAMP,  
+   MTLN_CDC_SEQUENCE_NUMBER  as   MTLN_CDC_SEQUENCE_NUMBER,  
+   MTLN_CDC_LOAD_BATCH_ID  as   MTLN_CDC_LOAD_BATCH_ID,  
+   MTLN_CDC_LOAD_TIMESTAMP  as   MTLN_CDC_LOAD_TIMESTAMP,  
+   MTLN_CDC_PROCESSED_DATE_HOUR  as   MTLN_CDC_PROCESSED_DATE_HOUR,  
+   MTLN_CDC_SRC_VERSION  as   MTLN_CDC_SRC_VERSION,  
+   MTLN_CDC_FILENAME  as   MTLN_CDC_FILENAME,  
+   MTLN_CDC_FILEPATH  as   MTLN_CDC_FILEPATH,  
+   MTLN_CDC_SRC_DATABASE  as   MTLN_CDC_SRC_DATABASE,  
+   MTLN_CDC_SRC_SCHEMA  as   MTLN_CDC_SRC_SCHEMA,  
+   MTLN_CDC_SRC_TABLE  as   MTLN_CDC_SRC_TABLE,  
+   CCTRANSATION_FACT_FK  as   CCTRANSATION_FACT_FK,  
+   PAYMENTMETHOD_DIM_FK  as   PAYMENTMETHOD_DIM_FK,  
+   PAYINPAYOUTREASON_DIM_FK  as   PAYINPAYOUTREASON_DIM_FK,  
+   SHIFT_DIM_FK  as   SHIFT_DIM_FK,  
+   IS_VOID  as   IS_VOID,  
+   VOIDED_AT  as   VOIDED_AT,  
+   CREATED_AT  as   CREATED_AT,  
+   UPDATED_AT  as   UPDATED_AT,  
+   STATUS  as   STATUS,  
+   VOIDED_BY  as   VOIDED_BY,  
+   NOTES  as   NOTES,  
+   CC_TRANSACTION_ID  as   CC_TRANSACTION_ID,  
+   PAY_IN_OUT_REASON_ID  as   PAY_IN_OUT_REASON_ID,  
+   SHIFT_ID  as   SHIFT_ID,  
+   AMOUNT  as   AMOUNT 
+  FROM DATAADMIN.PAYINOUT_FACT
+     WHERE MTLN_CDC_SEQUENCE_NUMBER > :highwater);
+
+ 
+ --======================================================================================================================== 
+
+ 
+--========================================================================================================================
+CALL SP_UpdateDWTable( ''DATASTAGE'', ''PAYINOUT_FACT'');
+IF (validate_date = TRUE)  THEN  errorCount_res := (CALL DATAADMIN.SP_ValidateDWDates(''p'',''PAYINOUT_FACT'',''COUNT''));
+END IF;
+return table(errorCount_res); END';
