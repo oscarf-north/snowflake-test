@@ -1,0 +1,5 @@
+create or replace task TASK_DQ_DISCOUNT_ARRAY_ISSUE
+	warehouse=HOSPENG_SMALL_WH
+	schedule='USING CRON 0 6 * * * America/Chicago'
+	USER_TASK_TIMEOUT_MS=3600000
+	as CALL DATAADMIN.SP_DQ_DISCOUNT_ARRAY_ISSUE();
