@@ -31,7 +31,10 @@ jobs:
 
       - name: Run Snowflake → Git sync
         env:
-          GH_TOKEN:         ${{ secrets.GH_TOKEN }}
+          GH_APP_ID:         ${{ secrets.GH_APP_ID }}
+          GH_INSTALLATION_ID:    ${{ secrets.GH_INSTALLATION_ID }}
+          GH_PRIVATE_KEY_PATH:    ${{ secrets.GH_PRIVATE_KEY_PATH }}
           GH_REPOSITORY:    ${{ secrets.GH_REPOSITORY }}
         run: |
           python src.sync.py --source --commit
+          

@@ -1,4 +1,4 @@
-# scripts/sync.py
+# src/sync.py
 
 """
 Main entry point for the Snowflake → Git sync (currently CSV → Git).
@@ -8,18 +8,20 @@ For now, it:
 - For each row (object), computes the target path in db/PRD_HOSPEND_REPORTING/.
 - Only writes files whose DDL content actually changed.
 - Optionally commits and pushes the changes to Git.
-
-Later, `--source snowflake` can be wired to a real Snowflake reader
-without changing the rest of the code.
 """
 
 import argparse
-
 from datetime import datetime
+
 from sync_engine.diff_engine import has_changed
-from sync_engine.git_handler import commit_changes
-from sync_engine.source_adapter import load_source
 from sync_engine.file_writer import get_file_path, write_file
+from sync_engine.git_handler import (
+    stage_all_changes,
+    commit_changes,
+    push_changes,
+)
+from sync_engine.source_adapter import load_source
+
 
 def main():
     parser = argparse.ArgumentParser(description="Sync DDLs to Git repository.")
@@ -55,27 +57,43 @@ def main():
             continue
 
         ddl = row["DDL"]
-        
+
         if has_changed(file_path, ddl):
             print(f"Updating: {file_path}")
             write_file(file_path, ddl)
             changes += 1
         else:
             print(f"No change: {file_path}")
-        
-    # 3. Optionally commit changes to Git.
+
+    # 3. Report changes
     if changes > 0:
         print(f"\nTotal objects updated: {changes}")
     else:
         print("\nNo Changes detected by sync.")
 
-    if args.commit:
-        # Timestamped commit message
-        Timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
-        commit_changes(message=f"[AUTO] Sync DDLs from {args.source} at {Timestamp}.")
-    else:
+    # 4. Optionally commit & push (only if there were changes)
+    if not args.commit:
         print("Commit flag not set (--commit); no git commit/push performed.")
+        return
 
+    # At this point: --commit is set AND we have changes on disk.
+    # Stage only the DDL output (handled inside stage_all_changes).
+    stage_all_changes()
+
+    # Timestamped commit message
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+    message = f"[AUTO] Sync DDLs from {args.source} at {timestamp}."
+
+    committed = commit_changes(message=message)
+
+    if not committed:
+        # This should be rare if we just staged, but keep it safe.
+        print("No staged changes to commit after staging; skipping push.")
+        return
+
+    # Use GitHub App–based push (enforced in git_handler.push_changes)
+    push_changes(branch="main")
+    print("Git commit and push completed via GitHub App.")
 
 if __name__ == "__main__":
     print("Starting...")
